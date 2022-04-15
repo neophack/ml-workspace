@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM nvcr.io/nvidia/tensorrt:21.09-py3
 
 USER root
 
@@ -6,25 +6,38 @@ USER root
 # Technical Environment Variables
 ENV \
     SHELL="/bin/bash" \
-    HOME="/root"  \
     # Nobteook server user: https://github.com/jupyter/docker-stacks/blob/master/base-notebook/Dockerfile#L33
-    NB_USER="root" \
+    NB_USER="ml" \
     USER_GID=0 \
-    XDG_CACHE_HOME="/root/.cache/" \
+    XDG_CACHE_HOME="$HOME/.cache/" \
     XDG_RUNTIME_DIR="/tmp" \
     DISPLAY=":1" \
     TERM="xterm" \
     DEBIAN_FRONTEND="noninteractive" \
     RESOURCES_PATH="/resources" \
     SSL_RESOURCES_PATH="/resources/ssl" \
-    WORKSPACE_HOME="/workspace"
+    WORKSPACE_HOME="/workspace" \
+    TZ="Asia/Shanghai"
+
+ENV HOME="/home/$NB_USER" 
 
 WORKDIR $HOME
+
+# replace source
+RUN cp /etc/apt/sources.list /etc/apt/sources.list.bak && \
+    echo "deb http://mirrors.163.com/ubuntu/ focal main restricted universe multiverse" > /etc/apt/sources.list && \
+    echo "deb http://mirrors.163.com/ubuntu/ focal-security main restricted universe multiverse" >> /etc/apt/sources.list && \
+    echo "deb http://mirrors.163.com/ubuntu/ focal-updates main restricted universe multiverse" >> /etc/apt/sources.list && \
+    echo "deb http://mirrors.163.com/ubuntu/ focal-backports main restricted universe multiverse" >> /etc/apt/sources.list && \
+    echo "deb-src http://mirrors.163.com/ubuntu/ focal main restricted universe multiverse" >> /etc/apt/sources.list && \
+    echo "deb-src http://mirrors.163.com/ubuntu/ focal-security main restricted universe multiverse" >> /etc/apt/sources.list && \
+    echo "deb-src http://mirrors.163.com/ubuntu/ focal-updates main restricted universe multiverse" >> /etc/apt/sources.list && \
+    echo "deb-src http://mirrors.163.com/ubuntu/ focal-backports main restricted universe multiverse" >> /etc/apt/sources.list 
 
 # Make folders
 RUN \
     mkdir $RESOURCES_PATH && chmod a+rwx $RESOURCES_PATH && \
-    mkdir $WORKSPACE_HOME && chmod a+rwx $WORKSPACE_HOME && \
+    # mkdir $WORKSPACE_HOME && chmod a+rwx $WORKSPACE_HOME && \
     mkdir $SSL_RESOURCES_PATH && chmod a+rwx $SSL_RESOURCES_PATH
 
 # Layer cleanup script
@@ -184,6 +197,10 @@ RUN \
         unp \
         libbz2-dev \
         liblzma-dev \
+        fonts-wqy-microhei \
+        ttf-wqy-zenhei \
+        gdb \
+        gosu \
         zlib1g-dev && \
     # Update git to newest version
     add-apt-repository -y ppa:git-core/ppa  && \
@@ -197,6 +214,20 @@ RUN \
     fix-permissions.sh $HOME && \
     # Cleanup
     clean-layer.sh
+
+# user
+RUN true \
+# Any command which returns non-zero exit code will cause this shell script to exit immediately:
+    && set -e \
+# Activate debugging to show execution details: all commands will be printed before execution
+    && set -x \
+
+# change user to non-root (http://pjdietz.com/2016/08/28/nginx-in-docker-without-root.html):
+    # && mv $PROJECTOR_DIR/$NB_USER /home \
+    && chmod g+rw /home && mkdir -p $HOME \
+    && useradd -d $HOME -s /bin/bash -G sudo $NB_USER \
+    && echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers \
+    && chown -R $NB_USER.$NB_USER /home/$NB_USER 
 
 # Add tini
 RUN wget --no-verbose https://github.com/krallin/tini/releases/download/v0.19.0/tini -O /tini && \
@@ -515,7 +546,7 @@ RUN \
     # Cleanup
     clean-layer.sh
 
-ARG ARG_WORKSPACE_FLAVOR="full"
+ARG ARG_WORKSPACE_FLAVOR="minimal"
 ENV WORKSPACE_FLAVOR=$ARG_WORKSPACE_FLAVOR
 
 # Install Visual Studio Code
@@ -610,7 +641,7 @@ RUN \
     # Install mkldnn
     conda install -y --freeze-installed -c mingfeima mkldnn && \
     # Install pytorch - cpu only
-    conda install -y -c pytorch "pytorch==1.9.*" cpuonly && \
+    # conda install -y -c pytorch "pytorch==1.9.*" cpuonly && \
     # Install light pip requirements
     pip install --no-cache-dir --upgrade --upgrade-strategy only-if-needed -r ${RESOURCES_PATH}/libraries/requirements-light.txt && \
     # If light light flavor - exit here
@@ -908,6 +939,19 @@ RUN \
 
 RUN \
     apt-get update && \
+    # https://pytorch.org/get-started/locally/
+    conda install cudatoolkit=11.1 -c pytorch -c nvidia && \
+    pip install --no-cache-dir torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu111 && \
+    # Install cupy: https://cupy.chainer.org/
+    pip install --no-cache-dir cupy-cuda111 && \
+    # Install pycuda: https://pypi.org/project/pycuda
+    pip install --no-cache-dir pycuda && \
+    # Install gpu utils libs
+    pip install --no-cache-dir gpustat py3nvml gputil && \
+     # Install scikit-cuda: https://scikit-cuda.readthedocs.io/en/latest/install.html
+    pip install --no-cache-dir scikit-cuda && \
+    # Install ONNX GPU Runtime
+    pip install --no-cache-dir onnxruntime-gpu==1.8.0 onnxruntime-training==1.8.0 onnx==1.9.0 && \
     # Required by magenta
     # apt-get install -y libasound2-dev && \
     # required by rodeo ide (8MB)
@@ -1056,7 +1100,7 @@ RUN \
     chmod a+rwx /usr/local/bin/start-notebook.sh && \
     chmod a+rwx /usr/local/bin/start.sh && \
     chmod a+rwx /usr/local/bin/start-singleuser.sh && \
-    chown root:root /tmp && \
+    chown $NB_USER:$NB_USER /tmp && \
     chmod 1777 /tmp && \
     # TODO: does 1777 work fine? chmod a+rwx /tmp && \
     # Set /workspace as default directory to navigate to as root user
@@ -1164,6 +1208,7 @@ LABEL \
 # So that they do not lose their data if they delete the container.
 # TODO: VOLUME [ "/workspace" ]
 # TODO: WORKDIR /workspace?
+USER $NB_USER
 
 # use global option with tini to kill full process groups: https://github.com/krallin/tini#process-group-killing
 ENTRYPOINT ["/tini", "-g", "--"]

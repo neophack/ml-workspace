@@ -61,7 +61,7 @@ find $HOME/.vnc/ -name '*.log' -delete
 # Launch daemon
 
 sleep 1
-$command &> "$HOME/.vnc/vnc.log" &
+sudo gosu ml $command &> "$HOME/.vnc/vnc.log" &
 sleep 5
 
 _wait_pid=$!
