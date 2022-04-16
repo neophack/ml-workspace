@@ -56,6 +56,7 @@ RUN \
     apt-get install -y locales && \
     # install locales-all?
     sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
+    
     locale-gen && \
     dpkg-reconfigure --frontend=noninteractive locales && \
     update-locale LANG=en_US.UTF-8 && \
@@ -608,7 +609,7 @@ RUN \
             'notebook=6.4.*' \
             'jupyterlab=3.0.*' \
             # TODO: nbconvert 6.x makes problems with template_path
-            'nbconvert=5.6.*' \
+            'nbconvert=6.5.*' \
             # TODO: temp fix: yarl version 1.5 is required for lots of libraries.
             'yarl==1.5.*' \
             # TODO install scipy, numpy, sklearn, and numexpr via conda for mkl optimizaed versions: https://docs.anaconda.com/mkl-optimizations/
@@ -977,6 +978,17 @@ RUN \
     # Cleanup
     clean-layer.sh
 
+RUN sed -i -e 's/# zh_CN.UTF-8 UTF-8/zh_CN.UTF-8 UTF-8/' /etc/locale.gen && \
+    locale-gen && \
+    dpkg-reconfigure --frontend=noninteractive locales 
+
+RUN \
+    apt-get update && \
+    apt-get install -y fcitx && \
+    apt-get install -y fcitx-googlepinyin fcitx-pinyin fcitx-sunpinyin && \
+    # Cleanup
+    clean-layer.sh
+RUN im-config -n fcitx
 ### END INCUBATION ZONE ###
 
 ### CONFIGURATION ###
@@ -1208,12 +1220,29 @@ LABEL \
 # So that they do not lose their data if they delete the container.
 # TODO: VOLUME [ "/workspace" ]
 # TODO: WORKDIR /workspace?
+
+RUN chown root:root /usr/bin/sudo && chmod 4755 /usr/bin/sudo
+
 USER $NB_USER
+
+RUN sudo chmod 777 $HOME/.ssh -R &&\
+    sudo chmod 777 $HOME/ -R &&\
+    sudo chown ml:ml $HOME/ -R &&\
+    sudo chmod 777 /etc/nginx/ -R &&\
+    sudo chown root:crontab /usr/bin/crontab &&\
+    sudo chmod 2755 /usr/bin/crontab &&\
+    sudo chmod 777 /var/log/supervisor/ -R &&\
+    sudo chmod 777 /var/run -R &&\
+    sudo chmod 777 /usr/local/openresty/nginx -R &&\
+    sudo chmod 777 /var/log -R &&\
+    sudo chmod g-w,o-w .oh-my-zsh -R
+
+
 
 # use global option with tini to kill full process groups: https://github.com/krallin/tini#process-group-killing
 ENTRYPOINT ["/tini", "-g", "--"]
 
-CMD ["python", "/resources/docker-entrypoint.py"]
+CMD ["sudo python", "/resources/docker-entrypoint.py"]
 
 # Port 8080 is the main access port (also includes SSH)
 # Port 5091 is the VNC port
