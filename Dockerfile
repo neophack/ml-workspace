@@ -941,10 +941,10 @@ RUN \
 RUN \
     apt-get update && \
     # https://pytorch.org/get-started/locally/
-    conda install cudatoolkit=11.1 -c pytorch -c nvidia && \
-    pip install --no-cache-dir torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu111 && \
+    conda install cudatoolkit=11.3 -c pytorch -c nvidia && \
+    pip install --no-cache-dir torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113 && \
     # Install cupy: https://cupy.chainer.org/
-    pip install --no-cache-dir cupy-cuda111 && \
+    pip install --no-cache-dir cupy-cuda113 && \
     # Install pycuda: https://pypi.org/project/pycuda
     pip install --no-cache-dir pycuda && \
     # Install gpu utils libs
@@ -982,13 +982,19 @@ RUN sed -i -e 's/# zh_CN.UTF-8 UTF-8/zh_CN.UTF-8 UTF-8/' /etc/locale.gen && \
     locale-gen && \
     dpkg-reconfigure --frontend=noninteractive locales 
 
+COPY resources/sogoupinyin_4.0.0.1605_amd64.deb $RESOURCES_PATH/
+
 RUN \
     apt-get update && \
     apt-get install -y fcitx && \
-    apt-get install -y fcitx-googlepinyin fcitx-pinyin fcitx-sunpinyin && \
+    # apt-get install -y fcitx-googlepinyin fcitx-pinyin fcitx-sunpinyin && \
+    apt install -y libgsettings-qt-dev qt5-default libqt5qml5 libxss-dev && \
+    gdebi $RESOURCES_PATH/sogoupinyin_4.0.0.1605_amd64.deb -n && \
     # Cleanup
     clean-layer.sh
+
 RUN im-config -n fcitx
+
 ### END INCUBATION ZONE ###
 
 ### CONFIGURATION ###
@@ -1242,7 +1248,7 @@ RUN sudo chmod 777 $HOME/.ssh -R &&\
 # use global option with tini to kill full process groups: https://github.com/krallin/tini#process-group-killing
 ENTRYPOINT ["/tini", "-g", "--"]
 
-CMD ["sudo python", "/resources/docker-entrypoint.py"]
+CMD ["python", "/resources/docker-entrypoint.py"]
 
 # Port 8080 is the main access port (also includes SSH)
 # Port 5091 is the VNC port
