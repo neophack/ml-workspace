@@ -1,4 +1,19 @@
-FROM nvcr.io/nvidia/tensorrt:21.09-py3
+#	Ubuntu 20.04
+# Note: Container image 21.06-py3 contains Python 3.8.
+# NVIDIA CUDA 11.3.1
+# cuBLAS 11.5.1.109
+# NVIDIA cuDNN 8.2.1
+# NVIDIA NCCL 2.9.9 (optimized for NVLink™ )
+# Note: Although NCCL is packaged in the container, it does not affect TensorRT nor inferencing in any way.
+# rdma-core 32.1
+# OpenMPI 4.1.1rc1
+# OpenUCX 1.10.1
+# GDRCopy 2.2
+# NVIDIA HPC-X 2.8.2rc3
+# Nsight Compute 2021.1.0.18
+# Nsight Systems 2021.2.1.58
+# TensorRT 7.2.3.4
+FROM nvcr.io/nvidia/tensorrt:21.06-py3 
 
 USER root
 
@@ -56,7 +71,6 @@ RUN \
     apt-get install -y locales && \
     # install locales-all?
     sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
-    
     locale-gen && \
     dpkg-reconfigure --frontend=noninteractive locales && \
     update-locale LANG=en_US.UTF-8 && \
@@ -222,7 +236,6 @@ RUN true \
     && set -e \
 # Activate debugging to show execution details: all commands will be printed before execution
     && set -x \
-
 # change user to non-root (http://pjdietz.com/2016/08/28/nginx-in-docker-without-root.html):
     # && mv $PROJECTOR_DIR/$NB_USER /home \
     && chmod g+rw /home && mkdir -p $HOME \
@@ -988,7 +1001,7 @@ RUN \
     apt-get update && \
     apt-get install -y fcitx && \
     # apt-get install -y fcitx-googlepinyin fcitx-pinyin fcitx-sunpinyin && \
-    apt install -y libgsettings-qt-dev qt5-default libqt5qml5 libxss-dev && \
+    apt-get install -y libgsettings-qt-dev qt5-default libqt5qml5 libxss-dev && \
     gdebi $RESOURCES_PATH/sogoupinyin_4.0.0.1605_amd64.deb -n && \
     # Cleanup
     clean-layer.sh

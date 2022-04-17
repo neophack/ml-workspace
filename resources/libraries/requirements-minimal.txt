@@ -103,4 +103,9 @@ jupyter_nbextensions_configurator==0.4.1 # jupyter serverextension providing con
 nbdime==3.1.0 # Diff and merge of Jupyter Notebooks
 
 # add
-opencv-python>=4.1.2
+opencv-python-headless==4.5.1.48 # Wrapper package for OpenCV python bindings.
+opencv-python==4.5.1.48 # Wrapper package for OpenCV python bindings.
+scikit-image==0.18.1 # Image processing routines for SciPy - version 0.14.1 is not compatible with numpy 16
+shapely==1.8.1
+xgboost==1.4.2 # Scalable, Portable and Distributed Gradient Boosting
+tensorboardX==2.3 # TensorBoardX lets you watch Tensors Flow without Tensorflow
