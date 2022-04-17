@@ -6,7 +6,7 @@ SyslogFacility AUTH
 LogLevel INFO
 
 # Root is the only user allowed to login
-AllowUsers root
+AllowUsers ml
 
 # Allow TCP Forwarding: required by vs code remote development: 
 # https://code.visualstudio.com/docs/remote/troubleshooting#_enabling-alternate-ssh-authentication-methods
@@ -24,7 +24,7 @@ ClientAliveCountMax 10
 GatewayPorts clientspecified
 
 # Only allow key-based authentication -> higher security
-PasswordAuthentication no
+PasswordAuthentication yes
 ChallengeResponseAuthentication no
 GSSAPIAuthentication no
 IgnoreRhosts yes

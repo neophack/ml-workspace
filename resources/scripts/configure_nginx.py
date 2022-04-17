@@ -48,7 +48,7 @@ call("sed -i 's@{SHARED_LINKS_ENABLED}@" + os.getenv("SHARED_LINKS_ENABLED", "fa
 
 # Replace key hash with actual sha1 hash of key
 try:
-    with open(os.getenv("HOME", "/root") + "/.ssh/id_ed25519", "r") as f:
+    with open("/root" + "/.ssh/id_ed25519", "r") as f:
         private_key = f.read()
 
     import hashlib

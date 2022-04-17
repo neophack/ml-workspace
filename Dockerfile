@@ -49,6 +49,7 @@ RUN cp /etc/apt/sources.list /etc/apt/sources.list.bak && \
     echo "deb-src http://mirrors.163.com/ubuntu/ focal-updates main restricted universe multiverse" >> /etc/apt/sources.list && \
     echo "deb-src http://mirrors.163.com/ubuntu/ focal-backports main restricted universe multiverse" >> /etc/apt/sources.list 
 
+
 # Make folders
 RUN \
     mkdir $RESOURCES_PATH && chmod a+rwx $RESOURCES_PATH && \
@@ -258,13 +259,13 @@ RUN \
         # SSH Tooling
         autossh \
         mussh && \
-    chmod go-w $HOME && \
-    mkdir -p $HOME/.ssh/ && \
+    chmod go-w /root && \
+    mkdir -p /root/.ssh/ && \
     # create empty config file if not exists
-    touch $HOME/.ssh/config  && \
-    sudo chown -R $NB_USER:users $HOME/.ssh && \
-    chmod 700 $HOME/.ssh && \
-    printenv >> $HOME/.ssh/environment && \
+    touch /root/.ssh/config  && \
+    sudo chown -R $NB_USER:users /root/.ssh && \
+    chmod 700 /root/.ssh && \
+    printenv >> /root/.ssh/environment && \
     chmod -R a+rwx /usr/local/bin/ && \
     # Fix permissions
     fix-permissions.sh $HOME && \
@@ -383,6 +384,7 @@ RUN pip install pipx && \
     # Cleanup
     clean-layer.sh
 ENV PATH=$HOME/.local/bin:$PATH
+
 
 # Install node.js
 RUN \
@@ -950,12 +952,14 @@ RUN \
 ### END VSCODE ###
 
 ### INCUBATION ZONE ###
+#torch
+RUN \
+    # https://pytorch.org/get-started/locally/
+    pip install --no-cache-dir  torchvision torchaudio torch --extra-index-url https://download.pytorch.org/whl/cu113  &&\
+    clean-layer.sh  
 
 RUN \
-    apt-get update && \
-    # https://pytorch.org/get-started/locally/
-    conda install cudatoolkit=11.3 -c pytorch -c nvidia && \
-    pip install --no-cache-dir torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113 && \
+    apt-get update && \  
     # Install cupy: https://cupy.chainer.org/
     pip install --no-cache-dir cupy-cuda113 && \
     # Install pycuda: https://pypi.org/project/pycuda
@@ -1120,7 +1124,7 @@ COPY resources/reports $RESOURCES_PATH/reports
 
 # Various configurations
 RUN \
-    touch $HOME/.ssh/config && \
+    touch /root/.ssh/config && \
     # clear chome init file - not needed since we load settings manually
     chmod -R a+rwx $WORKSPACE_HOME && \
     chmod -R a+rwx $RESOURCES_PATH && \
@@ -1233,7 +1237,7 @@ LABEL \
     "org.label-schema.vcs-ref"=$ARG_VCS_REF \
     "org.label-schema.build-date"=$ARG_BUILD_DATE
 
-# Removed - is run during startup since a few env variables are dynamically changed: RUN printenv > $HOME/.ssh/environment
+# Removed - is run during startup since a few env variables are dynamically changed: RUN printenv > /root/.ssh/environment
 
 # This assures we have a volume mounted even if the user forgot to do bind mount.
 # So that they do not lose their data if they delete the container.
@@ -1244,7 +1248,7 @@ RUN chown root:root /usr/bin/sudo && chmod 4755 /usr/bin/sudo
 
 USER $NB_USER
 
-RUN sudo chmod 777 $HOME/.ssh -R &&\
+RUN \
     sudo chmod 777 $HOME/ -R &&\
     sudo chown ml:ml $HOME/ -R &&\
     sudo chmod 777 /etc/nginx/ -R &&\
@@ -1252,9 +1256,10 @@ RUN sudo chmod 777 $HOME/.ssh -R &&\
     sudo chmod 2755 /usr/bin/crontab &&\
     sudo chmod 777 /var/log/supervisor/ -R &&\
     sudo chmod 777 /var/run -R &&\
+    sudo chmod 400 /var/run/sshd && \
     sudo chmod 777 /usr/local/openresty/nginx -R &&\
     sudo chmod 777 /var/log -R &&\
-    sudo chmod g-w,o-w .oh-my-zsh -R
+    sudo chmod g-w,o-w .oh-my-zsh -R 
 
 
 

@@ -956,7 +956,7 @@ def parse_endpoint_origin(endpoint_url: str):
 
 
 def generate_token(base_url: str):
-    private_ssh_key_path = HOME + "/.ssh/id_ed25519"
+    private_ssh_key_path = "/root" + "/.ssh/id_ed25519"
     with open(private_ssh_key_path, "r") as f:
         runtime_private_key = f.read()
 
@@ -974,7 +974,7 @@ def generate_token(base_url: str):
 
 def get_setup_script(hostname: str = None, port: str = None):
 
-    private_ssh_key_path = HOME + "/.ssh/id_ed25519"
+    private_ssh_key_path = "/root" + "/.ssh/id_ed25519"
     with open(private_ssh_key_path, "r") as f:
         runtime_private_key = f.read()
 

@@ -17,7 +17,7 @@ logging.basicConfig(
 
 log = logging.getLogger(__name__)
 
-HOME = os.getenv("HOME", "/root")
+HOME = "/root"
 RESOURCE_FOLDER = os.getenv('RESOURCES_PATH')
 
 # Export environment for ssh sessions

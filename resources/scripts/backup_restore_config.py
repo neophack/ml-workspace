@@ -27,7 +27,7 @@ args, unknown = parser.parse_known_args()
 if unknown:
     log.info("Unknown arguments " + str(unknown))
 
-WORKSPACE_HOME = os.getenv('WORKSPACE_HOME')
+WORKSPACE_HOME = os.getenv('HOME')
 USER_HOME = os.getenv('HOME')
 RESOURCE_FOLDER = os.getenv('RESOURCES_PATH')
 CONFIG_BACKUP_ENABLED = os.getenv('CONFIG_BACKUP_ENABLED')
