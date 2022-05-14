@@ -19,12 +19,14 @@ USER root
 
 ### BASICS ###
 # Technical Environment Variables
+
 ENV \
     SHELL="/bin/bash" \
     # Nobteook server user: https://github.com/jupyter/docker-stacks/blob/master/base-notebook/Dockerfile#L33
     NB_USER="ml" \
+    HOME="/home/ml" \
     USER_GID=0 \
-    XDG_CACHE_HOME="$HOME/.cache/" \
+    XDG_CACHE_HOME="/home/ml/.cache/" \
     XDG_RUNTIME_DIR="/tmp" \
     DISPLAY=":1" \
     TERM="xterm" \
@@ -33,8 +35,6 @@ ENV \
     SSL_RESOURCES_PATH="/resources/ssl" \
     WORKSPACE_HOME="/workspace" \
     TZ="Asia/Shanghai"
-
-ENV HOME="/home/$NB_USER" 
 
 WORKDIR $HOME
 
@@ -897,6 +897,7 @@ RUN \
 # Alternative install: /usr/local/bin/code-server --user-data-dir=$HOME/.config/Code/ --extensions-dir=$HOME/.vscode/extensions/ --install-extension ms-python-release && \
 RUN \
     SLEEP_TIMER=25 && \
+    mkdir -p $HOME/.vscode/extensions/ && \
     # If minimal flavor -> exit here
     if [ "$WORKSPACE_FLAVOR" = "minimal" ]; then \
         exit 0 ; \
@@ -1005,7 +1006,7 @@ RUN \
     apt-get update && \
     apt-get install -y fcitx && \
     # apt-get install -y fcitx-googlepinyin fcitx-pinyin fcitx-sunpinyin && \
-    apt-get install -y libgsettings-qt-dev qt5-default libqt5qml5 libxss-dev && \
+    apt-get install -y libgsettings-qt-dev qt5-default libqt5qml5 libxss-dev  eog && \
     gdebi $RESOURCES_PATH/sogoupinyin_4.0.0.1605_amd64.deb -n && \
     # Cleanup
     clean-layer.sh
