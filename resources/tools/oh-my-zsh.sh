@@ -31,7 +31,11 @@ if ! hash zsh 2>/dev/null; then
     # Install fkill-cli: (too big - 30MB) npm install --global fkill-cli && \
     yes | sh -c "$(curl -fsSL https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
     # Install powerlevel10k for instant prompt
-    # git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
+    git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
+    curl -fsSL -o ${HOME:-~/}/.local/share/fonts/MesloLGS_NF_Regular.ttf https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Regular.ttf
+    curl -fsSL -o ${HOME:-~/}/.local/share/fonts/MesloLGS_NF_Bold.ttf https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold.ttf
+    curl -fsSL -o ${HOME:-~/}/.local/share/fonts/MesloLGS_NF_Italic.ttf https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Italic.ttf
+    curl -fsSL -o ${HOME:-~/}/.local/share/fonts/MesloLGS_NF_Bold_Italic.ttf https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold%20Italic.ttf
     # https://www.reddit.com/r/zsh/comments/dht4zt/make_zsh_start_instantly_with_this_one_weird_trick/
     # Install plugins
     git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
@@ -52,7 +56,7 @@ if ! hash zsh 2>/dev/null; then
     # Fix red arrow problem with avit theme
     sed -i 's/fg\[red\]}.${fg\[white\]})%}▶/fg\[white\]}.${fg\[white\]})%}▶/g' ~/.oh-my-zsh/themes/avit.zsh-theme
 
-    printf "export source ZSH=\"$HOME/.oh-my-zsh\"\nZSH_THEME=\"avit\"\nDISABLE_AUTO_UPDATE=\"true\"\nZSH_AUTOSUGGEST_HIGHLIGHT_STYLE=\"fg=245\"\nplugins=(git k extract cp pip yarn npm sudo zsh-256color supervisor rsync command-not-found autojump colored-man-pages git-flow git-extras httpie python zsh-autosuggestions history-substring-search zsh-completions zsh-syntax-highlighting)\nsource \$ZSH/oh-my-zsh.sh\nLS_COLORS=\"\"\nexport LS_COLORS\nalias pcat=\"pygmentize -g\"\neval \"\$(pyenv init -)\"\neval \"\$(pyenv virtualenv-init -)\"" > ~/.zshrc
+    printf "export source ZSH=\"$HOME/.oh-my-zsh\"\nZSH_THEME=\"powerlevel10k/powerlevel10k\"\nDISABLE_AUTO_UPDATE=\"true\"\nZSH_AUTOSUGGEST_HIGHLIGHT_STYLE=\"fg=245\"\nplugins=(git k extract cp pip yarn npm sudo zsh-256color supervisor rsync command-not-found autojump colored-man-pages git-flow git-extras httpie python zsh-autosuggestions history-substring-search zsh-completions zsh-syntax-highlighting)\nsource \$ZSH/oh-my-zsh.sh\nLS_COLORS=\"\"\nexport LS_COLORS\nalias pcat=\"pygmentize -g\"\neval \"\$(pyenv init -)\"\neval \"\$(pyenv virtualenv-init -)\"" > ~/.zshrc
 
     # Also add fzf to plugins
     git clone --depth 1 https://github.com/junegunn/fzf.git $RESOURCES_PATH/.fzf

@@ -865,23 +865,6 @@ RUN \
     # Cleanup
     clean-layer.sh
 
-# Install and activate ZSH
-COPY resources/tools/oh-my-zsh.sh $RESOURCES_PATH/tools/oh-my-zsh.sh
-
-RUN \
-    # Install ZSH
-    /bin/bash $RESOURCES_PATH/tools/oh-my-zsh.sh --install && \
-    # Make zsh the default shell
-    # Initialize conda for command line activation
-    # TODO do not activate for now, opening the bash shell is a bit slow
-    # conda init bash && \
-    conda init zsh && \
-    chsh -s $(which zsh) $NB_USER && \
-    # Install sdkman - needs to be executed after zsh
-    curl -s https://get.sdkman.io | bash && \
-    # Cleanup
-    clean-layer.sh
-
 # Install Git LFS
 COPY resources/tools/git-lfs.sh $RESOURCES_PATH/tools/git-lfs.sh
 
@@ -899,9 +882,9 @@ RUN \
     SLEEP_TIMER=25 && \
     mkdir -p $HOME/.vscode/extensions/ && \
     # If minimal flavor -> exit here
-    if [ "$WORKSPACE_FLAVOR" = "minimal" ]; then \
-        exit 0 ; \
-    fi && \
+    # if [ "$WORKSPACE_FLAVOR" = "minimal" ]; then \
+    #     exit 0 ; \
+    # fi && \
     cd $RESOURCES_PATH && \
     mkdir -p $HOME/.vscode/extensions/ && \
     # Install vs code jupyter - required by python extension
@@ -920,9 +903,9 @@ RUN \
     # && code-server --install-extension ms-python.python@$VS_PYTHON_VERSION \
     sleep $SLEEP_TIMER && \
     # If light flavor -> exit here
-    if [ "$WORKSPACE_FLAVOR" = "light" ]; then \
-        exit 0 ; \
-    fi && \
+    # if [ "$WORKSPACE_FLAVOR" = "light" ]; then \
+    #     exit 0 ; \
+    # fi && \
     # Install prettie: https://github.com/prettier/prettier-vscode/releases
     PRETTIER_VERSION="6.4.0" && \
     wget --no-verbose https://github.com/prettier/prettier-vscode/releases/download/v$PRETTIER_VERSION/prettier-vscode-$PRETTIER_VERSION.vsix && \
@@ -960,17 +943,15 @@ RUN \
     clean-layer.sh  
 
 RUN \
-    apt-get update && \  
-    # Install cupy: https://cupy.chainer.org/
-    pip install --no-cache-dir cupy-cuda113 && \
+    # apt-get update && \  
+    # Install ONNX GPU Runtime Install cupy: https://cupy.chainer.org/
+    pip install --no-cache-dir onnxruntime-gpu==1.11.0 onnxruntime-training==1.11.0 onnx==1.9.0 cupy-cuda113 && \
     # Install pycuda: https://pypi.org/project/pycuda
     pip install --no-cache-dir pycuda && \
     # Install gpu utils libs
     pip install --no-cache-dir gpustat py3nvml gputil && \
      # Install scikit-cuda: https://scikit-cuda.readthedocs.io/en/latest/install.html
-    pip install --no-cache-dir scikit-cuda && \
-    # Install ONNX GPU Runtime
-    pip install --no-cache-dir onnxruntime-gpu==1.8.0 onnxruntime-training==1.8.0 onnx==1.9.0 && \
+    pip install --no-cache-dir scikit-cuda && \   
     # Required by magenta
     # apt-get install -y libasound2-dev && \
     # required by rodeo ide (8MB)
@@ -984,11 +965,11 @@ RUN \
     # mysql server: 150MB
     # apt-get install -y mysql-server && \
     # If minimal or light flavor -> exit here
-    if [ "$WORKSPACE_FLAVOR" = "minimal" ] || [ "$WORKSPACE_FLAVOR" = "light" ]; then \
-        # Cleanup
-        clean-layer.sh  && \
-        exit 0 ; \
-    fi && \
+    # if [ "$WORKSPACE_FLAVOR" = "minimal" ] || [ "$WORKSPACE_FLAVOR" = "light" ]; then \
+    #     # Cleanup
+    #     clean-layer.sh  && \
+    #     exit 0 ; \
+    # fi && \
     # Install fkill-cli program  TODO: 30MB, remove?
     # npm install --global fkill-cli && \
     # Activate pretty-errors
@@ -1006,12 +987,66 @@ RUN \
     apt-get update && \
     apt-get install -y fcitx && \
     # apt-get install -y fcitx-googlepinyin fcitx-pinyin fcitx-sunpinyin && \
-    apt-get install -y libgsettings-qt-dev qt5-default libqt5qml5 libxss-dev  eog && \
+    apt-get install -y libgsettings-qt-dev qt5-default libqt5qml5 libxss-dev eog && \
     gdebi $RESOURCES_PATH/sogoupinyin_4.0.0.1605_amd64.deb -n && \
     # Cleanup
     clean-layer.sh
 
 RUN im-config -n fcitx
+
+ARG ARG_ROS_FLAVOR="all" \
+    ROS_DISTRO=noetic \
+    ROS2_DISTRO=galactic \
+    INSTALL_PACKAGE=desktop 
+
+RUN \
+    if [ "$ARG_ROS_FLAVOR" = "all" ] || [ "$ARG_ROS_FLAVOR" = "ros" ]; then \
+        # ros1
+        apt-get update && \ 
+        apt-get install -y curl gnupg2 lsb-release && \
+        echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list && \
+        apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654 && \
+        apt-get update && \
+        apt-get install -y ros-${ROS_DISTRO}-${INSTALL_PACKAGE} && \
+        clean-layer.sh  && \
+        exit 0 ; \
+    fi 
+
+RUN \
+    if [ "$ARG_ROS_FLAVOR" = "all" ] || [ "$ARG_ROS_FLAVOR" = "ros2" ]; then \
+        # ros2
+        apt-get update && \ 
+        apt-get install -y curl gnupg2 lsb-release && \
+        curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg && \
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null && \
+        apt-get update -q && \
+        apt-get install -y ros-${ROS2_DISTRO}-${INSTALL_PACKAGE} \
+        python3-argcomplete \
+        python3-colcon-common-extensions \
+        python3-rosdep python3-vcstool \
+        ros-${ROS2_DISTRO}-gazebo-ros-pkgs && \
+        rosdep init && \
+        clean-layer.sh && \
+        exit 0 ; \
+    fi 
+
+
+# Install and activate ZSH
+COPY resources/tools/oh-my-zsh.sh $RESOURCES_PATH/tools/oh-my-zsh.sh
+
+RUN \
+    # Install ZSH
+    /bin/bash $RESOURCES_PATH/tools/oh-my-zsh.sh --install && \
+    # Make zsh the default shell
+    # Initialize conda for command line activation
+    # TODO do not activate for now, opening the bash shell is a bit slow
+    conda init bash && \
+    conda init zsh && \
+    chsh -s $(which zsh) $NB_USER && \
+    # Install sdkman - needs to be executed after zsh
+    curl -s https://get.sdkman.io | bash && \
+    # Cleanup
+    clean-layer.sh
 
 ### END INCUBATION ZONE ###
 
@@ -1052,12 +1087,6 @@ RUN \
     ## create index.html to forward automatically to `vnc.html`
     # Needs to be run after patching
     ln -s $RESOURCES_PATH/novnc/vnc.html $RESOURCES_PATH/novnc/index.html
-
-# Basic VNC Settings - no password
-ENV \
-    VNC_PW=vncpassword \
-    VNC_RESOLUTION=1600x900 \
-    VNC_COL_DEPTH=24
 
 # Add tensorboard patch - use tensorboard jupyter plugin instead of the actual tensorboard magic
 COPY resources/jupyter/tensorboard_notebook_patch.py $CONDA_PYTHON_DIR/site-packages/tensorboard/notebook.py
@@ -1140,7 +1169,10 @@ RUN \
     chmod 1777 /tmp && \
     # TODO: does 1777 work fine? chmod a+rwx /tmp && \
     # Set /workspace as default directory to navigate to as root user
-    echo 'cd '$WORKSPACE_HOME >> $HOME/.bashrc
+    echo 'cd '$WORKSPACE_HOME >> $HOME/.bashrc && \
+    printf "\necho \"choose ros neotic(1) or ros2 galactic(2) or none:\"\nread edition\n if [ \"\$edition\" ] && [ \"\$edition\" -eq \"1\" ]; then \n  source /opt/ros/noetic/setup.bash \n  export ROS_HOSTNAME=localhost \n  export ROSMASTER_URI=http://localhost:11311 \n  export ROS_IP=\'hostname -I\' \n  echo -e \"\\\\033[33mros environment\\\\033[0m \" \nelif [ \"\$edition\" ] && [ \"\$edition\" -eq \"2\" ]; then \n  source /opt/ros/galactic/setup.bash \n  echo -e \"\\\\033[32mros2 environment\\\\033[0m\" \nelse\n  echo -e \"\\\\033[35mnone ros environment\\\\033[0m\" \nfi" >> $HOME/.bashrc && \
+    chown root:root /usr/bin/sudo && chmod 4755 /usr/bin/sudo
+
 
 # MKL and Hardware Optimization
 # Fix problem with MKL with duplicated libiomp5: https://github.com/dmlc/xgboost/issues/1715
@@ -1173,10 +1205,13 @@ ENV KMP_DUPLICATE_LIB_OK="True" \
     # will cause pretty_errors to check if it is running in an interactive terminal
     PYTHON_PRETTY_ERRORS_ISATTY_ONLY=1 \
     # TODO: evaluate - Deactivate hdf5 file locking
-    HDF5_USE_FILE_LOCKING=False
-
-# Set default values for environment variables
-ENV CONFIG_BACKUP_ENABLED="true" \
+    HDF5_USE_FILE_LOCKING=False \
+    # Basic VNC Settings - no password
+    VNC_PW=vncpassword \
+    VNC_RESOLUTION=1600x900 \
+    VNC_COL_DEPTH=24 \
+    # Set default values for environment variables
+    CONFIG_BACKUP_ENABLED="true" \
     SHUTDOWN_INACTIVE_KERNELS="false" \
     SHARED_LINKS_ENABLED="true" \
     AUTHENTICATE_VIA_JUPYTER="false" \
@@ -1196,9 +1231,9 @@ ENV CONFIG_BACKUP_ENABLED="true" \
     MAX_NUM_THREADS="auto"
 
 ### END CONFIGURATION ###
-ARG ARG_BUILD_DATE="unknown"
-ARG ARG_VCS_REF="unknown"
-ARG ARG_WORKSPACE_VERSION="unknown"
+ARG ARG_BUILD_DATE="unknown" \
+    ARG_VCS_REF="unknown" \
+    ARG_WORKSPACE_VERSION="unknown"
 ENV WORKSPACE_VERSION=$ARG_WORKSPACE_VERSION
 
 # Overwrite & add Labels
@@ -1245,7 +1280,6 @@ LABEL \
 # TODO: VOLUME [ "/workspace" ]
 # TODO: WORKDIR /workspace?
 
-RUN chown root:root /usr/bin/sudo && chmod 4755 /usr/bin/sudo
 
 USER $NB_USER
 
@@ -1262,12 +1296,12 @@ RUN \
     sudo chmod 777 /var/log -R &&\
     sudo chmod g-w,o-w .oh-my-zsh -R 
 
-
+CMD ["python", "/resources/docker-entrypoint.py"]
 
 # use global option with tini to kill full process groups: https://github.com/krallin/tini#process-group-killing
 ENTRYPOINT ["/tini", "-g", "--"]
 
-CMD ["python", "/resources/docker-entrypoint.py"]
+
 
 # Port 8080 is the main access port (also includes SSH)
 # Port 5091 is the VNC port
@@ -1276,4 +1310,5 @@ CMD ["python", "/resources/docker-entrypoint.py"]
 # See supervisor.conf for more ports
 
 EXPOSE 8080
+
 ###

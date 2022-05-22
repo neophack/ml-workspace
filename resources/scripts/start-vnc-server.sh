@@ -19,6 +19,8 @@ VNC_COL_DEPTH=${VNC_COL_DEPTH:-"24"}
 mkdir -p $HOME/.vnc
 touch $HOME/.vnc/passwd
 
+chmod 1777 /tmp 
+
 # Set password:
 echo "$VNC_PW" | vncpasswd -f >> $HOME/.vnc/passwd
 chmod 600 $HOME/.vnc/passwd
@@ -54,6 +56,7 @@ fi
 
 #cleanup tmp from previous run
 rm -rfv /tmp/.X*-lock /tmp/.x*-lock /tmp/.X11-unix
+
 # Delete existing logs
 find $HOME/.vnc/ -name '*.log' -delete
 # rm -rf /tmp/.X* /tmp/.x* /tmp/ssh*
