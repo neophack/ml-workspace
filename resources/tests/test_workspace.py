@@ -8,7 +8,7 @@ from typing import Union
 import pytest
 import requests
 
-workspace_host = os.getenv("WORKSPACE_IP", "localhost")
+workspace_host = os.getenv("WORKSPACE_IP", "0.0.0.0")
 workspace_port = os.getenv("WORKSPACE_ACCESS_PORT", "8080")
 
 

@@ -1028,7 +1028,7 @@ RUN \
 
 
 # Install and activate ZSH
-COPY resources/tools/oh-my-zsh.sh $RESOURCES_PATH/tools/oh-my-zsh.sh
+COPY resources/tools/oh-my-zsh.sh resources/.p10k.zsh $RESOURCES_PATH/tools/
 
 RUN \
     # Install ZSH
@@ -1040,7 +1040,8 @@ RUN \
     conda init zsh && \
     chsh -s $(which zsh) $NB_USER && \
     # Install sdkman - needs to be executed after zsh
-    curl -s https://get.sdkman.io | bash && \
+    curl -s https://get.sdkman.io | bash && \ 
+    cp $RESOURCES_PATH/tools/.p10k.zsh $HOME/ && \  
     # Cleanup
     clean-layer.sh
 
