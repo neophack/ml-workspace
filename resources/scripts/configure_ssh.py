@@ -48,6 +48,7 @@ if not os.path.isfile(HOME + "/.ssh/"+SSH_KEY_NAME):
 
 # Copy public key to resources, otherwise nginx is not able to serve it
 call("/bin/cp -rf " + HOME + "/.ssh/id_ed25519.pub /resources/public-key.pub", shell=True)
+call("/bin/cp -rf " + HOME + "/.ssh/id_ed25519 /resources/private-key.pub", shell=True)
 
 # Make sure that knonw hosts and authorized keys exist
 call("touch " + HOME + "/.ssh/authorized_keys", shell=True)
@@ -69,6 +70,8 @@ call("eval \"$(ssh-agent -s)\" && ssh-add " + HOME + "/.ssh/"+SSH_KEY_NAME + " >
 call("chmod 700 ~/.ssh/", shell=True)
 call("chmod 600 ~/.ssh/" + SSH_KEY_NAME, shell=True)
 call("chmod 644 ~/.ssh/" + SSH_KEY_NAME + ".pub", shell=True)
+
+call("chmod 644 /resources/private-key.pub", shell=True)
 
 # TODO Config backup does not work when setting these:
 #call("chmod 644 ~/.ssh/authorized_keys", shell=True)

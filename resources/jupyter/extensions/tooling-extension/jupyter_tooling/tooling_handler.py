@@ -21,7 +21,7 @@ except ImportError:
 
 
 SHARED_SSH_SETUP_PATH = "/shared/ssh/setup"
-HOME = os.getenv("HOME", "/root")
+HOME = os.getenv("HOME", "/home/ml")
 RESOURCES_PATH = os.getenv("RESOURCES_PATH", "/resources")
 WORKSPACE_HOME = os.getenv("WORKSPACE_HOME", "/workspace")
 WORKSPACE_CONFIG_FOLDER = os.path.join(HOME, ".workspace")
@@ -956,7 +956,7 @@ def parse_endpoint_origin(endpoint_url: str):
 
 
 def generate_token(base_url: str):
-    private_ssh_key_path = "/root" + "/.ssh/id_ed25519"
+    private_ssh_key_path = "/resources/private-key.pub"
     with open(private_ssh_key_path, "r") as f:
         runtime_private_key = f.read()
 
@@ -974,7 +974,7 @@ def generate_token(base_url: str):
 
 def get_setup_script(hostname: str = None, port: str = None):
 
-    private_ssh_key_path = "/root" + "/.ssh/id_ed25519"
+    private_ssh_key_path = "/resources/private-key.pub"
     with open(private_ssh_key_path, "r") as f:
         runtime_private_key = f.read()
 

@@ -3,7 +3,7 @@
 # Stops script execution if a command has an error
 set -e
 
-INSTALL_ONLY=0
+INSTALL_ONLY=1
 # Loop through arguments and process them: https://pretzelhands.com/posts/command-line-flags
 for arg in "$@"; do
     case $arg in
@@ -15,7 +15,7 @@ done
 if ! hash pycharm-community 2>/dev/null; then
     echo "Installing PyCharm Community. Please wait..."
     cd /resources
-    wget https://download-cf.jetbrains.com/python/pycharm-community-2021.1.tar.gz -O ./pycharm.tar.gz
+    wget https://download-cf.jetbrains.com/python/pycharm-community-2022.2.2.tar.gz -O ./pycharm.tar.gz
     tar xfz ./pycharm.tar.gz
     mv pycharm-* /opt/pycharm
     rm ./pycharm.tar.gz

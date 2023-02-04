@@ -56,7 +56,6 @@ fi
 
 #cleanup tmp from previous run
 rm -rfv /tmp/.X*-lock /tmp/.x*-lock /tmp/.X11-unix
-
 # Delete existing logs
 find $HOME/.vnc/ -name '*.log' -delete
 # rm -rf /tmp/.X* /tmp/.x* /tmp/ssh*

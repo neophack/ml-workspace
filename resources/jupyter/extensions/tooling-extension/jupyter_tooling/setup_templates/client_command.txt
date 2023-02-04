@@ -23,7 +23,7 @@ then
 Host $SSH_CONNECTION_NAME
     Hostname {HOSTNAME_RUNTIME}
     Port {PORT_RUNTIME}
-    User root
+    User ml
     ServerAliveCountMax 10
     ServerAliveInterval 60
     IdentityFile ~/.ssh/$SSH_CONNECTION_NAME

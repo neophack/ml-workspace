@@ -58,13 +58,13 @@ SwitchKey=Disabled
 # Switching Remind Mode
 #RemindSwitchKey=
 # Switching Full Width Character Mode
-#FullWidthSwitchKey=
+FullWidthSwitchKey=SHIFT_SPACE
 # Switch Full Width Punc Mode
 #PuncSwitchKey=CTRL_.
 # Prev Page
-#PrevPageKey=- UP
+PrevPageKey=, -
 # Next Page
-#NextPageKey== DOWN
+NextPageKey=. =
 # Choose Second and Third Candidate Word
 #SecondThirdCandWordKey=
 # Saving All Config and Input History
@@ -89,7 +89,7 @@ SwitchKey=Disabled
 # Available Value:
 # Inactive
 # Active
-#DefaultInputMethodState=Inactive
+DefaultInputMethodState=Active
 
 [Output]
 # Type half width Punc After a Number
@@ -114,6 +114,8 @@ SwitchKey=Disabled
 # Available Value:
 # True False
 #DontCommitPreeditWhenUnfocus=False
+
+CandidateWordNumber=5
 
 [Appearance]
 # Show Input Method Hint After Input method changed

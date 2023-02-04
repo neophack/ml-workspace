@@ -26,6 +26,7 @@ c.NotebookApp.trust_xheaders = True
 c.MappingKernelManager.buffer_offline_messages = True
 c.Application.log_level = "WARN"
 c.NotebookApp.log_level = "WARN"
+# c.NotebookApp.contents_manager_class = "notebook.services.contents.manager.ContentsManager"
 
 c.JupyterApp.answer_yes = True
 
