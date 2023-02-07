@@ -32,7 +32,7 @@ ENV \
     HOME="/home/ml" \
     USER_GID=0 \
     XDG_CACHE_HOME="/home/ml/.cache/" \
-    XDG_RUNTIME_DIR="/tmp" \
+    XDG_RUNTIME_DIR="/tmp/runtime-root" \
     DISPLAY=":1" \
     TERM="xterm" \
     DEBIAN_FRONTEND="noninteractive" \
@@ -925,24 +925,16 @@ RUN \
 
 RUN \
     # apt-get update && \  
+    # Install minimal pip requirements
+    pip install --no-cache-dir --upgrade --upgrade-strategy only-if-needed -r ${RESOURCES_PATH}/libraries/requirements-minimal.txt && \
     # Install ONNX GPU Runtime Install cupy: https://cupy.chainer.org/
-    pip install --no-cache-dir onnxruntime-gpu onnxruntime-training onnx  && \
+    pip install --no-cache-dir onnxruntime-gpu onnxruntime-training onnx && \
     # Install pycuda: https://pypi.org/project/pycuda
     pip install --no-cache-dir pycuda && \
     # Install gpu utils libs
     pip install --no-cache-dir gpustat py3nvml gputil && \
      # Install scikit-cuda: https://scikit-cuda.readthedocs.io/en/latest/install.html
     pip install --no-cache-dir scikit-cuda && \
-    pip install --no-cache-dir albumentations && \
-    pip install --no-cache-dir python-crontab &&\
-    pip install --no-cache-dir shapely thop &&\
-     # Wrapper package for OpenCV python bindings.
-    pip install --no-cache-dir opencv-python-headless==4.5.5.62 &&\
-    # Wrapper package for OpenCV python bindings.
-    pip install --no-cache-dir opencv-python==4.5.5.62 &&\
-     # Image processing routines for SciPy - version 0.14.1 is not compatible with numpy 16
-    pip install --no-cache-dir scikit-image==0.19.1 &&\
-     
     # Required by magenta
     # apt-get install -y libasound2-dev && \
     # required by rodeo ide (8MB)
@@ -1202,8 +1194,7 @@ ENV KMP_DUPLICATE_LIB_OK="True" \
 ARG ARG_BUILD_DATE="unknown" \
     ARG_VCS_REF="unknown" \
     ARG_WORKSPACE_VERSION="unknown"
-ENV WORKSPACE_VERSION=$ARG_WORKSPACE_VERSION \
-    XDG_RUNTIME_DIR="/tmp/runtime-root"
+ENV WORKSPACE_VERSION=$ARG_WORKSPACE_VERSION 
 
 # Overwrite & add Labels
 LABEL \
