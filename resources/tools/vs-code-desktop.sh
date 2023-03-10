@@ -16,7 +16,7 @@ if [ ! -f "/usr/share/code/code" ]; then
     echo "Installing VS Code. Please wait..."
     cd $RESOURCES_PATH
     # Tmp fix to run vs code without no-sandbox: https://github.com/microsoft/vscode/issues/126027
-    wget -q https://az764295.vo.msecnd.net/stable/054a9295330880ed74ceaedda236253b4f39a335/code_1.56.2-1620838498_amd64.deb -O ./vscode.deb
+    wget -q https://az764295.vo.msecnd.net/stable/441438abd1ac652551dbe4d408dfcec8a499b8bf/code_1.75.1-1675893397_amd64.deb -O ./vscode.deb
     # wget -q https://go.microsoft.com/fwlink/?LinkID=760868 -O ./vscode.deb
     apt-get update
     apt-get install -y ./vscode.deb

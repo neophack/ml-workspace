@@ -21,7 +21,7 @@ log.info("Start Workspace")
 
 ENV_RESOURCES_PATH = os.getenv("RESOURCES_PATH", "/resources")
 
-ENV_OPENP2P_TOKEN = os.getenv("OPENP2P_TOKEN", "")
+# ENV_OPENP2P_TOKEN = os.getenv("OPENP2P_TOKEN", "")
 
 # Include tutorials 
 WORKSPACE_HOME = os.getenv('WORKSPACE_HOME', "/workspace")
@@ -52,9 +52,9 @@ call("python " + ENV_RESOURCES_PATH + "/scripts/configure_cron_scripts.py", shel
 log.info("Configure and run custom scripts")
 call("python " + ENV_RESOURCES_PATH + "/scripts/run_custom_scripts.py", shell=True)
 
-if ENV_OPENP2P_TOKEN:
-    log.info("Configure and run openp2p scripts")
-    call(ENV_RESOURCES_PATH + "/tools/openp2p.sh --token="+ENV_OPENP2P_TOKEN+"&", shell=True)
+# if ENV_OPENP2P_TOKEN:
+#     log.info("Configure and run openp2p scripts")
+    # call(ENV_RESOURCES_PATH + "/tools/openp2p.sh --token="+ENV_OPENP2P_TOKEN+"&", shell=True)
 
 startup_custom_script = os.path.join(WORKSPACE_HOME, "on_startup.sh")
 if os.path.exists(startup_custom_script):

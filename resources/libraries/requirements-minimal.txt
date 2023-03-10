@@ -3,7 +3,7 @@
 ## Basics
 # numpy Installed via conda
 Cython==0.29.27 # The Cython compiler for writing C extensions for the Python language.
-tqdm==4.62.3 # Fast, Extensible Progress Meter
+tqdm==4.64.1 # Fast, Extensible Progress Meter
 matplotlib==3.5.1 # Python plotting package
 requests==2.27.1 # Python HTTP for Humans.
 urllib3==1.26.8 # HTTP library with thread-safe connection pooling, file post, and more.
@@ -16,7 +16,7 @@ future==0.18.2 # Clean single-source support for Python 3 and 2
 python-dateutil==2.8.2 # Extensions to the standard Python datetime module
 PyYAML==6.0 # YAML parser and emitter for Python
 joblib==1.1.0 # Lightweight pipelining: using Python functions as pipeline jobs.
-Pillow==9.0.0 # Python Imaging Library (Fork)
+Pillow==9.4.0 # Python Imaging Library (Fork)
 pyzmq==22.3.0 # Python bindings for 0MQ
 python-crontab==2.6.0 # Python Crontab API
 cmake==3.22.2 # CMake is an open-source, cross-platform family of tools designed to build, test and package software

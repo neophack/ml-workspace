@@ -32,14 +32,20 @@ ENV \
     HOME="/home/ml" \
     USER_GID=0 \
     XDG_CACHE_HOME="/home/ml/.cache/" \
-    XDG_RUNTIME_DIR="/tmp" \
+    XDG_RUNTIME_DIR="/tmp/runtime-root" \
     DISPLAY=":1" \
     TERM="xterm" \
     DEBIAN_FRONTEND="noninteractive" \
     RESOURCES_PATH="/resources" \
     SSL_RESOURCES_PATH="/resources/ssl" \
     WORKSPACE_HOME="/workspace" \
-    TZ="Asia/Shanghai"
+    TZ="Asia/Shanghai" \
+    LC_ALL="en_US.UTF-8" \
+    LANG="en_US.UTF-8" \
+    LANGUAGE="en_US:en" \
+    PYTHON_VERSION=3.8 \
+    OPENCV_VERSION=4.7.0 \
+    GO_RELEASE=1.19.4
 
 WORKDIR $HOME
 
@@ -50,18 +56,16 @@ RUN cp /etc/apt/sources.list /etc/apt/sources.list.bak && \
     echo "deb https://mirrors.ustc.edu.cn/ubuntu/ focal-updates main restricted universe multiverse" >> /etc/apt/sources.list && \
     echo "deb https://mirrors.ustc.edu.cn/ubuntu/ focal-backports main restricted universe multiverse" >> /etc/apt/sources.list 
 
-# Make folders
-RUN \
-    mkdir $RESOURCES_PATH && chmod a+rwx $RESOURCES_PATH && \
-    # mkdir $WORKSPACE_HOME && chmod a+rwx $WORKSPACE_HOME && \
-    mkdir $SSL_RESOURCES_PATH && chmod a+rwx $SSL_RESOURCES_PATH
-
 # Layer cleanup script
 COPY resources/scripts/clean-layer.sh  /usr/bin/clean-layer.sh
 COPY resources/scripts/fix-permissions.sh  /usr/bin/fix-permissions.sh
 
- # Make clean-layer and fix-permissions executable
- RUN \
+# Make folders
+RUN \
+    mkdir $RESOURCES_PATH && chmod a+rwx $RESOURCES_PATH && \
+    # mkdir $WORKSPACE_HOME && chmod a+rwx $WORKSPACE_HOME && \
+    mkdir $SSL_RESOURCES_PATH && chmod a+rwx $SSL_RESOURCES_PATH && \
+    # Make clean-layer and fix-permissions executable
     chmod a+rwx /usr/bin/clean-layer.sh && \
     chmod a+rwx /usr/bin/fix-permissions.sh
 
@@ -75,12 +79,10 @@ RUN \
     locale-gen && \
     dpkg-reconfigure --frontend=noninteractive locales && \
     update-locale LANG=en_US.UTF-8 && \
+    rm -r /usr/local/include/opencv* /usr/local/lib/libopencv* /usr/local/lib/python3.8/dist-packages/cv2/ && \
     # Cleanup
     clean-layer.sh
 
-ENV LC_ALL="en_US.UTF-8" \
-    LANG="en_US.UTF-8" \
-    LANGUAGE="en_US:en"
 
 # Install basics
 RUN \
@@ -93,6 +95,8 @@ RUN \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         # This is necessary for apt to access HTTPS sources:
+        python3 \
+        python3-pip \
         apt-transport-https \
         gnupg-agent \
         gpg-agent \
@@ -174,7 +178,7 @@ RUN \
         # sqlite3 driver - required for pyenv
         libsqlite3-dev \
         # VCS:
-        git \
+        # git \
         subversion \
         jed \
         # odbc drivers
@@ -217,7 +221,55 @@ RUN \
         ttf-wqy-zenhei \
         gdb \
         gosu \
-        zlib1g-dev && \
+        zlib1g-dev \
+        checkinstall \
+        gfortran \
+        libatlas-base-dev \
+        libavcodec-dev \
+        libavformat-dev \
+        libavresample-dev \
+        libeigen3-dev \
+        libexpat1-dev \
+        libglew-dev \
+        libgtk-3-dev \
+        libjpeg-dev \
+        libopenexr-dev \
+        libpng-dev \
+        libpostproc-dev \
+        libpq-dev \
+        libqt5opengl5-dev \
+        libsm6 \
+        libswscale-dev \
+        libtbb2 \
+        libtbb-dev \
+        libtiff-dev \
+        libtool \
+        libv4l-dev \
+        libwebp-dev \
+        libxext6 \
+        libxrender1 \
+        libxvidcore-dev \
+        pkg-config \
+        protobuf-compiler \
+        qt5-default \
+        yasm \
+#   GStreamer :
+        libgstreamer1.0-0 \
+        gstreamer1.0-plugins-base \
+        gstreamer1.0-plugins-good \
+        gstreamer1.0-plugins-bad \
+        gstreamer1.0-plugins-ugly \
+        gstreamer1.0-libav \
+        gstreamer1.0-doc \
+        gstreamer1.0-tools \
+        gstreamer1.0-x \
+        gstreamer1.0-alsa \
+        gstreamer1.0-gl \
+        gstreamer1.0-gtk3 \
+        gstreamer1.0-qt5 \
+        gstreamer1.0-pulseaudio \
+        libgstreamer1.0-dev \
+        libgstreamer-plugins-base1.0-dev && \
     # Update git to newest version
     add-apt-repository -y ppa:git-core/ppa  && \
     apt-get update && \
@@ -230,6 +282,62 @@ RUN \
     fix-permissions.sh $HOME && \
     # Cleanup
     clean-layer.sh
+
+# opencv and opencv-contrib :
+RUN cd /opt/ &&\
+    curl -Lo opencv.zip https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip &&\
+    unzip -qq opencv.zip &&\
+    rm opencv.zip &&\
+    curl -Lo opencv-co.zip https://github.com/opencv/opencv_contrib/archive/${OPENCV_VERSION}.zip &&\
+    unzip -qq opencv-co.zip &&\
+    rm opencv-co.zip && \
+    # curl -Lo get-pip.py https://bootstrap.pypa.io/get-pip.py  && \
+    # python${PYTHON_VERSION} get-pip.py --no-setuptools --no-wheel && \
+    # pip install --upgrade cmake && \
+    mkdir /opt/opencv-${OPENCV_VERSION}/build && cd /opt/opencv-${OPENCV_VERSION}/build &&\
+    cmake \
+      -D BUILD_opencv_java=OFF \
+      -D WITH_CUDA=ON \
+      -D BUILD_opencv_dnn=ON \
+      -D CUDA_ARCH_BIN=8.6 \
+      -D CUDA_ARCH_PTX=8.6 \ 
+      -D WITH_CUBLAS=ON \
+      -D WITH_CUDNN=ON \
+      -D OPENCV_DNN_CUDA=ON \
+      -D ENABLE_FAST_MATH=1\
+      -D CUDA_FAST_MATH=1\
+      -D WITH_NVCUVID=ON \
+      -D WITH_CUFFT=ON \
+      -D WITH_OPENGL=ON \
+      -D WITH_QT=ON \
+      -D WITH_IPP=ON \
+      -D WITH_TBB=ON \
+      -D WITH_EIGEN=ON \
+      -D CUDA_NVCC_FLAGS=-Wno-deprecated-gpu-targets \
+      -D CMAKE_BUILD_TYPE=RELEASE \
+      -D OPENCV_EXTRA_MODULES_PATH=/opt/opencv_contrib-${OPENCV_VERSION}/modules \
+      -D PYTHON2_EXECUTABLE=$(python${PYTHON_VERSION} -c "import sys; print(sys.prefix)") \
+      -D CMAKE_INSTALL_PREFIX=/usr/local/ \
+      -D PYTHON_EXECUTABLE=$(which python${PYTHON_VERSION}) \
+      -D PYTHON_INCLUDE_DIR=$(python${PYTHON_VERSION} -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
+      -D PYTHON3_PACKAGES_PATH=/usr/lib/python${PYTHON_VERSION}/dist-packages \
+      -D CUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda \
+      -D CMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs \
+      -D OpenGL_GL_PREFERENCE=LEGACY \
+      -D WITH_HALIDE=ON \
+      -D OPENCV_GENERATE_PKGCONFIG=ON \
+        .. &&\
+    make -j$(nproc) && \
+    make install && \
+    ldconfig &&\
+    ln -s \                                         
+        /usr/lib/python3.8/dist-packages/cv2/python-3.8/cv2.cpython-38-x86_64-linux-gnu.so  \
+        /usr/local/lib/python3.8/dist-packages/cv2.so && \
+    rm -rf /opt/opencv-${OPENCV_VERSION} && rm -rf /opt/opencv_contrib-${OPENCV_VERSION}
+
+RUN curl -Lo go${GO_RELEASE}.linux-amd64.tar.gz https://dl.google.com/go/go${GO_RELEASE}.linux-amd64.tar.gz && \
+    tar xfv go${GO_RELEASE}.linux-amd64.tar.gz -C /usr/local && \
+    rm go${GO_RELEASE}.linux-amd64.tar.gz
 
 # user
 RUN true \
@@ -276,13 +384,13 @@ RUN wget --no-verbose https://github.com/krallin/tini/releases/download/v0.19.0/
     # libpcre required, otherwise you get a 'the HTTP rewrite module requires the PCRE library' error
     # Install apache2-utils to generate user:password file for nginx.
     apt-get install -y libssl-dev libpcre3 libpcre3-dev apache2-utils && \
-    wget --no-verbose https://openresty.org/download/openresty-$OPEN_RESTY_VERSION.tar.gz  -O ./openresty.tar.gz && \
+    curl -sSL https://openresty.org/download/openresty-$OPEN_RESTY_VERSION.tar.gz  -o ./openresty.tar.gz && \
     tar xfz ./openresty.tar.gz && \
     rm ./openresty.tar.gz && \
     cd ./openresty-$OPEN_RESTY_VERSION/ && \
     # Surpress output - if there is a problem remove  > /dev/null
     ./configure --with-http_stub_status_module --with-http_sub_module > /dev/null && \
-    make -j2 > /dev/null && \
+    make -j$(nproc) > /dev/null && \
     make install > /dev/null && \
     # create log dir and file - otherwise openresty will throw an error
     mkdir -p /var/log/nginx/ && \
@@ -294,7 +402,7 @@ RUN wget --no-verbose https://github.com/krallin/tini/releases/download/v0.19.0/
     # Cleanup
     clean-layer.sh
 
-ENV PATH=/usr/local/openresty/nginx/sbin:$PATH
+ENV PATH=/usr/local/openresty/nginx/sbin:$PATH:/usr/local/go/bin
 
 COPY resources/nginx/lua-extensions /etc/nginx/nginx_plugins
 
@@ -367,9 +475,11 @@ RUN git clone https://github.com/pyenv/pyenv.git $HOME/.pyenv && \
     # Required by pyenv
     apt-get install -y --no-install-recommends libffi-dev && \
     # Install pipx
-    pip install pipx && \
+    python3 -m pip install pipx && \
+    # pip install --upgrade pip && \
+    # pip install pipx && \
     # Configure pipx
-    python -m pipx ensurepath && \
+    python3 -m pipx ensurepath && \
     # Install node.js
     apt-get update && \
     # https://nodejs.org/en/about/releases/ use even numbered releases, i.e. LTS versions
@@ -551,15 +661,15 @@ ARG ARG_WORKSPACE_FLAVOR="minimal"
 ENV WORKSPACE_FLAVOR=$ARG_WORKSPACE_FLAVOR
 
 # Install Visual Studio Code
-COPY resources/tools/vs-code-desktop.sh $RESOURCES_PATH/tools/vs-code-desktop.sh
-RUN \
-    # If minimal flavor - do not install
-    if [ "$WORKSPACE_FLAVOR" = "minimal" ]; then \
-        exit 0 ; \
-    fi && \
-    /bin/bash $RESOURCES_PATH/tools/vs-code-desktop.sh --install && \
-    # Cleanup
-    clean-layer.sh
+# COPY resources/tools/vs-code-desktop.sh $RESOURCES_PATH/tools/vs-code-desktop.sh
+# RUN \
+#     If minimal flavor - do not install
+#     if [ "$WORKSPACE_FLAVOR" = "minimal" ]; then \
+#         exit 0 ; \
+#     fi && \
+#     /bin/bash $RESOURCES_PATH/tools/vs-code-desktop.sh --install && \
+#     # Cleanup
+#     clean-layer.sh
 
 # Install Firefox
 
@@ -925,6 +1035,8 @@ RUN \
 
 RUN \
     # apt-get update && \  
+    # Install minimal pip requirements
+    pip install --no-cache-dir --upgrade --upgrade-strategy only-if-needed -r ${RESOURCES_PATH}/libraries/requirements-minimal.txt && \
     # Install ONNX GPU Runtime Install cupy: https://cupy.chainer.org/
     pip install --no-cache-dir onnxruntime-gpu onnxruntime-training onnx  && \
     # Install pycuda: https://pypi.org/project/pycuda
@@ -937,9 +1049,9 @@ RUN \
     pip install --no-cache-dir python-crontab &&\
     pip install --no-cache-dir shapely thop &&\
      # Wrapper package for OpenCV python bindings.
-    pip install --no-cache-dir opencv-python-headless==4.5.5.62 &&\
-    # Wrapper package for OpenCV python bindings.
-    pip install --no-cache-dir opencv-python==4.5.5.62 &&\
+    # pip install --no-cache-dir opencv-python-headless==4.5.5.62 &&\
+    # # Wrapper package for OpenCV python bindings.
+    # pip install --no-cache-dir opencv-python==4.5.5.62 &&\
      # Image processing routines for SciPy - version 0.14.1 is not compatible with numpy 16
     pip install --no-cache-dir scikit-image==0.19.1 &&\
      
@@ -1019,6 +1131,7 @@ RUN \
         clean-layer.sh && \
         exit 0 ; \
     fi 
+
 
 # Install and activate ZSH
 COPY resources/tools/oh-my-zsh.sh resources/.p10k.zsh $RESOURCES_PATH/tools/

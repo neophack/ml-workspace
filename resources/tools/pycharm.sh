@@ -15,7 +15,7 @@ done
 if ! hash pycharm-community 2>/dev/null; then
     echo "Installing PyCharm Community. Please wait..."
     cd /resources
-    wget https://download-cf.jetbrains.com/python/pycharm-community-2022.2.2.tar.gz -O ./pycharm.tar.gz
+    curl -sSL  https://download-cf.jetbrains.com/python/pycharm-community-2022.3.3.tar.gz -o ./pycharm.tar.gz
     tar xfz ./pycharm.tar.gz
     mv pycharm-* /opt/pycharm
     rm ./pycharm.tar.gz
