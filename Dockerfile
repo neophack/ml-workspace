@@ -1,24 +1,19 @@
 # Ubuntu 20.04 including Python 3.8
-# NVIDIA CUDA® 12.0.1
-# NVIDIA cuBLAS from CUDA 12.0.1
-# NVIDIA cuDNN 8.7.0.84
-# NVIDIA NCCL 2.16.5 (optimized for NVIDIA NVLink®)
-# NVIDIA RAPIDS™ 22.12.0 (For x86, only these libraries are included: cudf, xgboost, rmm, cuml, and cugraph.)
-# Apex
+# NVIDIA CUDA 12.0.1
+# cuTENSOR 1.6.2.3
+# NVIDIA cuDNN 8.7.0
+# NVIDIA NCCL 2.16.5
 # rdma-core 36.0
-# NVIDIA HPC-X 2.13
 # OpenMPI 4.1.4+
 # GDRCopy 2.3
-# TensorBoard 2.9.0
-# Nsight Compute 2022.4.1.6
 # Nsight Systems 2022.5.1
-# NVIDIA TensorRT™ 8.5.2.2
-# Torch-TensorRT 1.4.0dev0
-# NVIDIA DALI® 1.21.0
-# MAGMA 2.6.2
-# JupyterLab 2.3.2 including Jupyter-TensorBoard
-# TransformerEngine 0.4
-FROM nvcr.io/nvidia/pytorch:23.01-py3
+# Nsight Compute 2022.4.1.6
+# NVIDIA HPC-X 2.13
+# TensorRT 8.5.3 for x64 Linux
+# Paddle-TRT 2.4
+# SHARP 3.0.2
+# DALI 1.22.0
+FROM nvcr.io/nvidia/paddlepaddle:23.02-py3
 
 USER root
 
@@ -714,7 +709,8 @@ RUN \
     # Create empty notebook configuration
     mkdir -p $HOME/.jupyter/nbconfig/ && \
     printf "{\"load_extensions\": {}}" > $HOME/.jupyter/nbconfig/notebook.json && \
-    pip --no-cache-dir install jupyter_contrib_nbextensions nbdime && \
+    pip --no-cache-dir install webcolors isoduration fqdn jsonpointer uri-template jupytext && \
+    pip --no-cache-dir install  jupyter_contrib_nbextensions==0.5.1 nbdime==3.1.1 && \
     # Activate and configure extensions
     jupyter contrib nbextension install --sys-prefix && \
     # nbextensions configurator
