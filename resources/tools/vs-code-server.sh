@@ -19,14 +19,14 @@ if [ ! -f "/usr/local/bin/code-server"  ]; then
     cd ${RESOURCES_PATH}
     VS_CODE_VERSION=4.9.1
     # Use yarn install since it is smaller
-    yarn --production --frozen-lockfile global add code-server@"$VS_CODE_VERSION"
-    yarn cache clean
-    ln -s /usr/local/bin/code-server /usr/bin/code-server
-    #wget -q https://github.com/cdr/code-server/releases/download/v$VS_CODE_VERSION/code-server_${VS_CODE_VERSION}_amd64.deb -O ./code-server.deb
-    #apt-get update
-    #apt-get install -y ./code-server.deb
-    #rm ./code-server.deb
-    #ln -s /usr/bin/code-server /usr/local/bin/code-server
+    # yarn --production --frozen-lockfile global add code-server@"$VS_CODE_VERSION"
+    # yarn cache clean
+    # ln -s /usr/local/bin/code-server /usr/bin/code-server
+    wget -q https://github.com/cdr/code-server/releases/download/v$VS_CODE_VERSION/code-server_${VS_CODE_VERSION}_amd64.deb -O ./code-server.deb
+    apt-get update
+    apt-get install -y ./code-server.deb
+    rm ./code-server.deb
+    ln -s /usr/bin/code-server /usr/local/bin/code-server
 else
     echo "VS Code Server is already installed"
 fi

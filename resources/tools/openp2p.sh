@@ -19,7 +19,7 @@ done
 if [ ! -f "$RESOURCES_PATH/openp2p"  ]; then
     echo "Installing Openp2p. Please wait..."
     cd $RESOURCES_PATH
-    OPENP2P_VERSION=3.5.7
+    OPENP2P_VERSION=3.18.4
     wget https://github.com/openp2p-cn/openp2p/releases/download/v$OPENP2P_VERSION/openp2p$OPENP2P_VERSION.linux-amd64.tar.gz
     tar xvpfz openp2p$OPENP2P_VERSION.linux-amd64.tar.gz
     rm ./openp2p$OPENP2P_VERSION.linux-amd64.tar.gz

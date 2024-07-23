@@ -1,24 +1,26 @@
 # Ubuntu 20.04 including Python 3.8
-# NVIDIA CUDA® 12.0.1
-# NVIDIA cuBLAS from CUDA 12.0.1
-# NVIDIA cuDNN 8.7.0.84
-# NVIDIA NCCL 2.16.5 (optimized for NVIDIA NVLink®)
-# NVIDIA RAPIDS™ 22.12.0 (For x86, only these libraries are included: cudf, xgboost, rmm, cuml, and cugraph.)
+# NVIDIA CUDA® 12.1.0
+# NVIDIA cuBLAS 12.1.3
+# NVIDIA cuDNN 8.9.0
+# NVIDIA NCCL 2.17.1
+# NVIDIA RAPIDS™ 23.02
 # Apex
 # rdma-core 36.0
 # NVIDIA HPC-X 2.13
 # OpenMPI 4.1.4+
 # GDRCopy 2.3
 # TensorBoard 2.9.0
-# Nsight Compute 2022.4.1.6
-# Nsight Systems 2022.5.1
-# NVIDIA TensorRT™ 8.5.2.2
-# Torch-TensorRT 1.4.0dev0
-# NVIDIA DALI® 1.21.0
+# Nsight Compute 2023.1.0.15
+# Nsight Systems 2023.1.1.127
+# NVIDIA TensorRT™ 8.6.1
+# Torch-TensorRT 1.4.0.dev0
+# NVIDIA DALI® 1.23.0
 # MAGMA 2.6.2
 # JupyterLab 2.3.2 including Jupyter-TensorBoard
-# TransformerEngine 0.4
-FROM nvcr.io/nvidia/pytorch:23.01-py3
+# TransformerEngine 0.7
+# PyTorch quantization wheel 2.1.2
+
+FROM nvcr.io/nvidia/pytorch:23.04-py3
 
 USER root
 
@@ -44,11 +46,11 @@ ENV \
 WORKDIR $HOME
 
 # replace source
-RUN cp /etc/apt/sources.list /etc/apt/sources.list.bak && \
-    echo "deb https://mirrors.ustc.edu.cn/ubuntu/ focal main restricted universe multiverse" > /etc/apt/sources.list && \
-    echo "deb https://mirrors.ustc.edu.cn/ubuntu/ focal-security main restricted universe multiverse" >> /etc/apt/sources.list && \
-    echo "deb https://mirrors.ustc.edu.cn/ubuntu/ focal-updates main restricted universe multiverse" >> /etc/apt/sources.list && \
-    echo "deb https://mirrors.ustc.edu.cn/ubuntu/ focal-backports main restricted universe multiverse" >> /etc/apt/sources.list 
+# RUN cp /etc/apt/sources.list /etc/apt/sources.list.bak && \
+#     echo "deb https://mirrors.ustc.edu.cn/ubuntu/ focal main restricted universe multiverse" > /etc/apt/sources.list && \
+#     echo "deb https://mirrors.ustc.edu.cn/ubuntu/ focal-security main restricted universe multiverse" >> /etc/apt/sources.list && \
+#     echo "deb https://mirrors.ustc.edu.cn/ubuntu/ focal-updates main restricted universe multiverse" >> /etc/apt/sources.list && \
+#     echo "deb https://mirrors.ustc.edu.cn/ubuntu/ focal-backports main restricted universe multiverse" >> /etc/apt/sources.list 
 
 # Make folders
 RUN \
@@ -373,7 +375,7 @@ RUN git clone https://github.com/pyenv/pyenv.git $HOME/.pyenv && \
     # Install node.js
     apt-get update && \
     # https://nodejs.org/en/about/releases/ use even numbered releases, i.e. LTS versions
-    curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - && \
+    curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash - && \
     apt-get install -y nodejs && \
     # As conda is first in path, the commands 'node' and 'npm' reference to the version of conda.
     # Replace those versions with the newly installed versions of node
@@ -532,11 +534,11 @@ RUN \
     clean-layer.sh
 
 ## netdata
-COPY resources/tools/netdata.sh $RESOURCES_PATH/tools/netdata.sh
-RUN \
-    /bin/bash $RESOURCES_PATH/tools/netdata.sh --install && \
-    # Cleanup
-    clean-layer.sh
+# COPY resources/tools/netdata.sh $RESOURCES_PATH/tools/netdata.sh
+# RUN \
+#     /bin/bash $RESOURCES_PATH/tools/netdata.sh --install && \
+#     # Cleanup
+#     clean-layer.sh
 
 ## Glances webtool is installed in python section below via requirements.txt
 
@@ -578,121 +580,7 @@ RUN \
 
 ### DATA SCIENCE BASICS ###
 
-## Python 3
-# Data science libraries requirements
-COPY resources/libraries ${RESOURCES_PATH}/libraries
 
-# ### Install main data science libs
-# RUN \
-#     # Link Conda - All python are linke to the conda instances
-#     # Linking python 3 crashes conda -> cannot install anyting - remove instead
-#     # ln -s -f $CONDA_ROOT/bin/python /usr/bin/python3 && \
-#     # if removed -> cannot use add-apt-repository
-#     # rm /usr/bin/python3 && \
-#     # rm /usr/bin/python3.5
-#     ln -s -f $CONDA_ROOT/bin/python /usr/bin/python && \
-#     apt-get update && \
-#     # upgrade pip
-#     pip install --upgrade pip && \
-#     # If minimal flavor - install
-#     if [ "$WORKSPACE_FLAVOR" = "minimal" ]; then \
-#         # Install nomkl - mkl needs lots of space
-#         conda install -y --update-all 'python='$PYTHON_VERSION nomkl ; \
-#     else \
-#         # Install mkl for faster computations
-#         conda install -y --update-all 'python='$PYTHON_VERSION mkl-service mkl ; \
-#     fi && \
-#     # Install some basics - required to run container
-#     conda install -y --update-all \
-#             'python='$PYTHON_VERSION \
-#             'ipython=8.0.*' \
-#             'notebook=6.4.*' \
-#             'jupyterlab=3.2.*' \
-#             # TODO: nbconvert 6.x makes problems with template_path
-#             'nbconvert=5.6.*' \
-#             # TODO: temp fix: yarl version 1.5 is required for lots of libraries.
-#             'yarl==1.5.*' \
-#             # TODO install scipy, numpy, sklearn, and numexpr via conda for mkl optimizaed versions: https://docs.anaconda.com/mkl-optimizations/
-#             'scipy==1.7.*' \
-#             'numpy==1.19.*' \
-#             scikit-learn \
-#             numexpr && \
-#             # installed via apt-get and pip: protobuf \
-#             # installed via apt-get: zlib  && \
-#     # Switch of channel priority, makes some trouble
-#     conda config --system --set channel_priority false && \
-#     # Install minimal pip requirements
-#     pip install --no-cache-dir --upgrade --upgrade-strategy only-if-needed -r ${RESOURCES_PATH}/libraries/requirements-minimal.txt && \
-#     # If minimal flavor - exit here
-#     if [ "$WORKSPACE_FLAVOR" = "minimal" ]; then \
-#         # Remove pandoc - package for markdown conversion - not needed
-#         # TODO: conda remove -y --force pandoc && \
-#         # Fix permissions
-#         fix-permissions.sh $CONDA_ROOT && \
-#         # Cleanup
-#         clean-layer.sh && \
-#         exit 0 ; \
-#     fi && \
-#     # OpenMPI support
-#     apt-get install -y --no-install-recommends libopenmpi-dev openmpi-bin && \
-#     conda install -y --freeze-installed  \
-#         'python='$PYTHON_VERSION \
-#         boost \
-#         mkl-include && \
-#     # Install mkldnn
-#     conda install -y --freeze-installed -c mingfeima mkldnn && \
-#     # Install pytorch - cpu only
-#     # conda install -y -c pytorch "pytorch==1.9.*" cpuonly && \
-#     # Install light pip requirements
-#     pip install --no-cache-dir --upgrade --upgrade-strategy only-if-needed -r ${RESOURCES_PATH}/libraries/requirements-light.txt && \
-#     # If light light flavor - exit here
-#     if [ "$WORKSPACE_FLAVOR" = "light" ]; then \
-#         # Fix permissions
-#         fix-permissions.sh $CONDA_ROOT && \
-#         # Cleanup
-#         clean-layer.sh && \
-#         exit 0 ; \
-#     fi && \
-#     # libartals == 40MB liblapack-dev == 20 MB
-#     apt-get install -y --no-install-recommends liblapack-dev libatlas-base-dev libeigen3-dev libblas-dev && \
-#     # pandoc -> installs libluajit -> problem for openresty
-#     # HDF5 (19MB)
-#     apt-get install -y --no-install-recommends libhdf5-dev && \
-#     # TBB threading optimization
-#     apt-get install -y --no-install-recommends libtbb-dev && \
-#     # required for tesseract: 11MB - tesseract-ocr-dev?
-#     apt-get install -y --no-install-recommends libtesseract-dev && \
-#     pip install --no-cache-dir tesserocr && \
-#     # TODO: installs tenserflow 2.4 - Required for tensorflow graphics (9MB)
-#     apt-get install -y --no-install-recommends libopenexr-dev && \
-#     #pip install --no-cache-dir tensorflow-graphics==2020.5.20 && \
-#     # GCC OpenMP (GOMP) support library
-#     apt-get install -y --no-install-recommends libgomp1 && \
-#     # Install Intel(R) Compiler Runtime - numba optimization
-#     # TODO: don't install, results in memory error: conda install -y --freeze-installed -c numba icc_rt && \
-#     # Install libjpeg turbo for speedup in image processing
-#     conda install -y --freeze-installed libjpeg-turbo && \
-#     # Add snakemake for workflow management
-#     conda install -y -c bioconda -c conda-forge snakemake-minimal && \
-#     # Add mamba as conda alternativ
-#     conda install -y -c conda-forge mamba && \
-#     # Faiss - A library for efficient similarity search and clustering of dense vectors.
-#     conda install -y --freeze-installed faiss-cpu && \
-#     # Install full pip requirements
-#     pip install --no-cache-dir --upgrade --upgrade-strategy only-if-needed --use-deprecated=legacy-resolver -r ${RESOURCES_PATH}/libraries/requirements-full.txt && \
-#     # Setup Spacy
-#     # Spacy - download and large language removal
-#     python -m spacy download en && \
-#     # Fix permissions
-#     fix-permissions.sh $CONDA_ROOT && \
-#     # Cleanup
-#     clean-layer.sh
-
-# # Fix conda version
-# RUN \
-#     # Conda installs wrong node version - relink conda node to the actual node
-#     rm -f /opt/conda/bin/node && ln -s /usr/bin/node /opt/conda/bin/node && \
-#     rm -f /opt/conda/bin/npm && ln -s /usr/bin/npm /opt/conda/bin/npm
 
 ### END DATA SCIENCE BASICS ###
 
@@ -771,77 +659,6 @@ RUN \
     # Cleanup
     clean-layer.sh
 
-# # install jupyterlab
-# RUN \
-#     # without es6-promise some extension builds fail
-#     npm install -g es6-promise && \
-#     # define alias command for jupyterlab extension installs with log prints to stdout
-#     jupyter lab build && \
-#     lab_ext_install='jupyter labextension install -y --debug-log-path=/dev/stdout --log-level=WARN --minimize=False --no-build' && \
-#     # jupyterlab installed in requirements section
-#     $lab_ext_install @jupyter-widgets/jupyterlab-manager && \
-#     # If minimal flavor - do not install jupyterlab extensions
-#     if [ "$WORKSPACE_FLAVOR" = "minimal" ]; then \
-#         # Final build with minimization
-#         jupyter lab build -y --debug-log-path=/dev/stdout --log-level=WARN && \
-#         # Cleanup
-#         jupyter lab clean && \
-#         jlpm cache clean && \
-#         # rm -rf $CONDA_ROOT/share/jupyter/lab/staging && \
-#         clean-layer.sh && \
-#         exit 0 ; \
-#     fi && \
-#     $lab_ext_install @jupyterlab/toc && \
-#     # install temporarily from gitrepo due to the issue that jupyterlab_tensorboard does not work with 3.x yet as described here: https://github.com/chaoleili/jupyterlab_tensorboard/issues/28#issuecomment-783594541
-#     #$lab_ext_install jupyterlab_tensorboard && \
-#     pip install git+https://github.com/chaoleili/jupyterlab_tensorboard.git && \
-#     # install jupyterlab git
-#     # $lab_ext_install @jupyterlab/git && \
-#     pip install jupyterlab-git && \
-#     # jupyter serverextension enable --py jupyterlab_git && \
-#     # For Matplotlib: https://github.com/matplotlib/jupyter-matplotlib
-#     #$lab_ext_install jupyter-matplotlib && \
-#     # Do not install any other jupyterlab extensions
-#     if [ "$WORKSPACE_FLAVOR" = "light" ]; then \
-#         # Final build with minimization
-#         jupyter lab build -y --debug-log-path=/dev/stdout --log-level=WARN && \
-#         # Cleanup
-#         jupyter lab clean && \
-#         jlpm cache clean && \
-#         # rm -rf $CONDA_ROOT/share/jupyter/lab/staging && \
-#         clean-layer.sh && \
-#         exit 0 ; \
-#     fi \
-#     # Install jupyterlab language server support
-#     && pip install jupyterlab-lsp==3.7.0 jupyter-lsp==1.3.0 && \
-#     # $lab_ext_install install @krassowski/jupyterlab-lsp@2.0.8 && \
-#     # For Plotly
-#     $lab_ext_install jupyterlab-plotly && \
-#     $lab_ext_install install @jupyter-widgets/jupyterlab-manager plotlywidget && \
-#     # produces build error: jupyter labextension install jupyterlab-chart-editor && \
-#     $lab_ext_install jupyterlab-chart-editor && \
-#     # Install jupyterlab variable inspector - https://github.com/lckr/jupyterlab-variableInspector
-#     pip install lckr-jupyterlab-variableinspector && \
-#     # For holoview
-#     # TODO: pyviz is not yet supported by the current JupyterLab version
-#     #     $lab_ext_install @pyviz/jupyterlab_pyviz && \
-#     # Install Debugger in Jupyter Lab
-#     # pip install --no-cache-dir xeus-python && \
-#     # $lab_ext_install @jupyterlab/debugger && \
-#     # Install jupyterlab code formattor - https://github.com/ryantam626/jupyterlab_code_formatter
-#     $lab_ext_install @ryantam626/jupyterlab_code_formatter && \
-#     pip install jupyterlab_code_formatter && \
-#     jupyter serverextension enable --py jupyterlab_code_formatter \
-#     # Final build with minimization
-#     && jupyter lab build -y --debug-log-path=/dev/stdout --log-level=WARN && \
-#     jupyter lab build && \
-#     # Cleanup
-#     # Clean jupyter lab cache: https://github.com/jupyterlab/jupyterlab/issues/4930
-#     jupyter lab clean && \
-#     jlpm cache clean && \
-#     # Remove build folder -> should be remove by lab clean as well?
-#     # rm -rf $CONDA_ROOT/share/jupyter/lab/staging && \
-#     clean-layer.sh
 
 # Install Jupyter Tooling Extension
 COPY resources/jupyter/extensions $RESOURCES_PATH/jupyter-extensions
@@ -921,20 +738,57 @@ RUN \
 
 ### END VSCODE ###
 
-### INCUBATION ZONE ###
+    
+# Install and activate ZSH
+COPY resources/tools/oh-my-zsh.sh resources/.p10k.zsh $RESOURCES_PATH/tools/
 
 RUN \
-    # apt-get update && \  
+    # Install ZSH
+    /bin/bash $RESOURCES_PATH/tools/oh-my-zsh.sh --install && \
+    # Make zsh the default shell
+    # Initialize conda for command line activation
+    # TODO do not activate for now, opening the bash shell is a bit slow
+    # conda init bash && \
+    # conda init zsh && \
+    chsh -s $(which zsh) $NB_USER && \
+    # Install sdkman - needs to be executed after zsh
+    curl -s https://get.sdkman.io | bash && \ 
+    cp $RESOURCES_PATH/tools/.p10k.zsh $HOME/ && \  
+    # Cleanup
+    clean-layer.sh
+
+COPY resources/fcitx-baidupinyin_1.0.1.0_amd64.deb $RESOURCES_PATH/
+
+RUN \
+    apt-get update && \
+    sed -i -e 's/# zh_CN.UTF-8 UTF-8/zh_CN.UTF-8 UTF-8/' /etc/locale.gen && \
+    locale-gen && \
+    dpkg-reconfigure --frontend=noninteractive locales && \
+    apt-get install -y fcitx && \
+    # apt-get install -y fcitx-googlepinyin fcitx-pinyin fcitx-sunpinyin && \
+    apt-get install -y libgsettings-qt-dev qt5-default libqt5qml5 libxss-dev eog libqt5qml5 libqt5quick5 libqt5quickwidgets5 qml-module-qtquick2 && \
+    gdebi $RESOURCES_PATH/fcitx-baidupinyin_1.0.1.0_amd64.deb -n && \
+    im-config -n fcitx && \
+    # Cleanup
+    clean-layer.sh 
+
+### INCUBATION ZONE ###
+## Python 3
+# Data science libraries requirements
+COPY resources/libraries ${RESOURCES_PATH}/libraries
+
+RUN \
+    apt-get update && \  
     # Install minimal pip requirements
-    pip install --no-cache-dir --upgrade --upgrade-strategy only-if-needed -r ${RESOURCES_PATH}/libraries/requirements-minimal.txt && \
     # Install ONNX GPU Runtime Install cupy: https://cupy.chainer.org/
-    pip install --no-cache-dir onnxruntime-gpu onnxruntime-training onnx && \
+    pip install --no-cache-dir onnxruntime-gpu onnx && \
     # Install pycuda: https://pypi.org/project/pycuda
-    pip install --no-cache-dir pycuda && \
+    # pip install --no-cache-dir pycuda && \
     # Install gpu utils libs
     pip install --no-cache-dir gpustat py3nvml gputil && \
      # Install scikit-cuda: https://scikit-cuda.readthedocs.io/en/latest/install.html
     pip install --no-cache-dir scikit-cuda && \
+    apt-get install -y nvtop && \
     # Required by magenta
     # apt-get install -y libasound2-dev && \
     # required by rodeo ide (8MB)
@@ -959,76 +813,46 @@ RUN \
     # python -m pretty_errors -u -p && \
     # Cleanup
     clean-layer.sh
-
-COPY resources/fcitx-baidupinyin_1.0.1.0_amd64.deb $RESOURCES_PATH/
-
-RUN \
-    apt-get update && \
-    sed -i -e 's/# zh_CN.UTF-8 UTF-8/zh_CN.UTF-8 UTF-8/' /etc/locale.gen && \
-    locale-gen && \
-    dpkg-reconfigure --frontend=noninteractive locales && \
-    apt-get install -y fcitx && \
-    # apt-get install -y fcitx-googlepinyin fcitx-pinyin fcitx-sunpinyin && \
-    apt-get install -y libgsettings-qt-dev qt5-default libqt5qml5 libxss-dev eog libqt5qml5 libqt5quick5 libqt5quickwidgets5 qml-module-qtquick2 && \
-    gdebi $RESOURCES_PATH/fcitx-baidupinyin_1.0.1.0_amd64.deb -n && \
-    im-config -n fcitx && \
-    # Cleanup
-    clean-layer.sh 
+    
+RUN pip install --no-cache-dir --upgrade --upgrade-strategy only-if-needed -r ${RESOURCES_PATH}/libraries/requirements-minimal.txt && \
+    clean-layer.sh
 
 ARG ARG_ROS_FLAVOR="all" \
     ROS_DISTRO=noetic \
     ROS2_DISTRO=galactic \
     INSTALL_PACKAGE=desktop 
 
-RUN \
-    if [ "$ARG_ROS_FLAVOR" = "all" ] || [ "$ARG_ROS_FLAVOR" = "ros" ]; then \
-        # ros1
-        apt-get update && \ 
-        apt-get install -y curl gnupg2 lsb-release && \
-        echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list && \
-        apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654 && \
-        apt-get update && \
-        apt-get install -y ros-${ROS_DISTRO}-${INSTALL_PACKAGE} && \
-        pip install --no-cache-dir catkin_pkg && \
-        clean-layer.sh  && \
-        exit 0 ; \
-    fi 
+# RUN \
+#     if [ "$ARG_ROS_FLAVOR" = "all" ] || [ "$ARG_ROS_FLAVOR" = "ros" ]; then \
+#         # ros1
+#         apt-get update && \ 
+#         apt-get install -y curl gnupg2 lsb-release && \
+#         echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list && \
+#         apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654 && \
+#         apt-get update && \
+#         apt-get install -y ros-${ROS_DISTRO}-${INSTALL_PACKAGE} && \
+#         pip install --no-cache-dir catkin_pkg && \
+#         clean-layer.sh  && \
+#         exit 0 ; \
+#     fi 
 
-RUN \
-    if [ "$ARG_ROS_FLAVOR" = "all" ] || [ "$ARG_ROS_FLAVOR" = "ros2" ]; then \
-        # ros2
-        apt-get update && \ 
-        apt-get install -y curl gnupg2 lsb-release && \
-        curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg && \
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null && \
-        apt-get update -q && \
-        apt-get install -y ros-${ROS2_DISTRO}-${INSTALL_PACKAGE} \
-        python3-argcomplete \
-        python3-colcon-common-extensions \
-        python3-rosdep python3-vcstool \
-        ros-${ROS2_DISTRO}-gazebo-ros-pkgs && \
-        rosdep init && \
-        clean-layer.sh && \
-        exit 0 ; \
-    fi 
-
-# Install and activate ZSH
-COPY resources/tools/oh-my-zsh.sh resources/.p10k.zsh $RESOURCES_PATH/tools/
-
-RUN \
-    # Install ZSH
-    /bin/bash $RESOURCES_PATH/tools/oh-my-zsh.sh --install && \
-    # Make zsh the default shell
-    # Initialize conda for command line activation
-    # TODO do not activate for now, opening the bash shell is a bit slow
-    # conda init bash && \
-    # conda init zsh && \
-    chsh -s $(which zsh) $NB_USER && \
-    # Install sdkman - needs to be executed after zsh
-    curl -s https://get.sdkman.io | bash && \ 
-    cp $RESOURCES_PATH/tools/.p10k.zsh $HOME/ && \  
-    # Cleanup
-    clean-layer.sh
+# RUN \
+#     if [ "$ARG_ROS_FLAVOR" = "all" ] || [ "$ARG_ROS_FLAVOR" = "ros2" ]; then \
+#         # ros2
+#         apt-get update && \ 
+#         apt-get install -y curl gnupg2 lsb-release && \
+#         curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg && \
+#         echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null && \
+#         apt-get update -q && \
+#         apt-get install -y ros-${ROS2_DISTRO}-${INSTALL_PACKAGE} \
+#         python3-argcomplete \
+#         python3-colcon-common-extensions \
+#         python3-rosdep python3-vcstool \
+#         ros-${ROS2_DISTRO}-gazebo-ros-pkgs && \
+#         rosdep init && \
+#         clean-layer.sh && \
+#         exit 0 ; \
+#     fi 
 
 ### END INCUBATION ZONE ###
 
@@ -1129,7 +953,7 @@ RUN \
     chmod a+rwx /tmp && \
     # Set /workspace as default directory to navigate to as root user
     echo 'cd '$WORKSPACE_HOME >> $HOME/.bashrc && \
-    printf "\necho \"choose ros neotic(1) or ros2 galactic(2) or none:\"\nread edition\n if [ \"\$edition\" ] && [ \"\$edition\" -eq \"1\" ]; then \n  source /opt/ros/noetic/setup.bash \n  export ROS_HOSTNAME=localhost \n  export ROSMASTER_URI=http://localhost:11311 \n  export ROS_IP=\'hostname -I\' \n  echo -e \"\\\\033[33mros environment\\\\033[0m \" \nelif [ \"\$edition\" ] && [ \"\$edition\" -eq \"2\" ]; then \n  source /opt/ros/galactic/setup.bash \n  echo -e \"\\\\033[32mros2 environment\\\\033[0m\" \nelse\n  echo -e \"\\\\033[35mnone ros environment\\\\033[0m\" \nfi" >> $HOME/.bashrc && \
+    # printf "\necho \"choose ros neotic(1) or ros2 galactic(2) or none:\"\nread edition\n if [ \"\$edition\" ] && [ \"\$edition\" -eq \"1\" ]; then \n  source /opt/ros/noetic/setup.bash \n  export ROS_HOSTNAME=localhost \n  export ROSMASTER_URI=http://localhost:11311 \n  export ROS_IP=\'hostname -I\' \n  echo -e \"\\\\033[33mros environment\\\\033[0m \" \nelif [ \"\$edition\" ] && [ \"\$edition\" -eq \"2\" ]; then \n  source /opt/ros/galactic/setup.bash \n  echo -e \"\\\\033[32mros2 environment\\\\033[0m\" \nelse\n  echo -e \"\\\\033[35mnone ros environment\\\\033[0m\" \nfi" >> $HOME/.bashrc && \
     chown root:root /usr/bin/sudo && chmod 4755 /usr/bin/sudo && \
     rm /usr/local/etc/jupyter/jupyter_notebook_config.py && \
     rm /opt/pytorch/jupyter_notebook_config.py
