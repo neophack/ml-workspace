@@ -817,6 +817,28 @@ RUN \
 RUN pip install --no-cache-dir --upgrade --upgrade-strategy only-if-needed -r ${RESOURCES_PATH}/libraries/requirements-minimal.txt && \
     clean-layer.sh
 
+RUN pip install --no-cache-dir transformers==4.33.1 timm==0.9.12 && \
+    clean-layer.sh   
+
+RUN \
+    git clone https://github.com/Dao-AILab/flash-attention.git && \
+    cd flash-attention && \
+    git checkout 85881f5  && \
+    MAX_JOBS=4 python setup.py install && \
+    pip install -e . && \
+    rm ../flash-attention -r && \
+    clean-layer.sh
+
+RUN \
+    git clone --recurse-submodules https://github.com/NVIDIA/TransformerEngine.git && \
+    cd TransformerEngine && \
+    git checkout 4e7caa1  && \ 
+    MAX_JOBS=4 python setup.py install && \
+    pip install -e . && \
+    rm ../TransformerEngine -r && \
+    clean-layer.sh
+
+
 ARG ARG_ROS_FLAVOR="all" \
     ROS_DISTRO=noetic \
     ROS2_DISTRO=galactic \
