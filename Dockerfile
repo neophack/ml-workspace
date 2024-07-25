@@ -1,26 +1,26 @@
-# Ubuntu 20.04 including Python 3.8
-# NVIDIA CUDA® 12.1.0
-# NVIDIA cuBLAS 12.1.3
-# NVIDIA cuDNN 8.9.0
-# NVIDIA NCCL 2.17.1
-# NVIDIA RAPIDS™ 23.02
-# Apex
-# rdma-core 36.0
-# NVIDIA HPC-X 2.13
+# Ubuntu 22.04 including Python 3.10
+# NVIDIA CUDA 12.4
+# NVIDIA cuBLAS 12.4.5.8
+# NVIDIA cuDNN 9.1.0.70
+# NVIDIA NCCL 2.21.5
+# NVIDIA RAPIDS™ 24.02
+# rdma-core 39.0
+# NVIDIA HPC-X 2.18
 # OpenMPI 4.1.4+
 # GDRCopy 2.3
 # TensorBoard 2.9.0
-# Nsight Compute 2023.1.0.15
-# Nsight Systems 2023.1.1.127
-# NVIDIA TensorRT™ 8.6.1
-# Torch-TensorRT 1.4.0.dev0
-# NVIDIA DALI® 1.23.0
+# Nsight Compute 2024.1.0.13
+# Nsight Systems 2024.2.1.38
+# NVIDIA TensorRT™ 8.6.3
+# Torch-TensorRT 2.3.0a0
+# NVIDIA DALI® 1.36
+# nvImageCodec 0.2.0.7
 # MAGMA 2.6.2
 # JupyterLab 2.3.2 including Jupyter-TensorBoard
-# TransformerEngine 0.7
+# TransformerEngine 1.5
 # PyTorch quantization wheel 2.1.2
 
-FROM nvcr.io/nvidia/pytorch:23.04-py3
+FROM nvcr.io/nvidia/pytorch:24.04-py3
 
 USER root
 
@@ -210,7 +210,7 @@ RUN \
         lzop \
 	    # deprecates bsdtar (https://ubuntu.pkgs.org/20.04/ubuntu-universe-i386/libarchive-tools_3.4.0-2ubuntu1_i386.deb.html)
         libarchive-tools \
-        zlibc \
+        # zlibc \
         # unpack (almost) everything with one command
         unp \
         libbz2-dev \
@@ -470,7 +470,7 @@ RUN \
     # Install nautilus and support for sftp mounting
     apt-get install -y --no-install-recommends nautilus gvfs-backends && \
     # Install gigolo - Access remote systems
-    apt-get install -y --no-install-recommends gigolo gvfs-bin && \
+    apt-get install -y --no-install-recommends gigolo && \
     # xfce systemload panel plugin - needs to be activated
     # apt-get install -y --no-install-recommends xfce4-systemload-plugin && \
     # Leightweight ftp client that supports sftp, http, ...
@@ -610,7 +610,7 @@ RUN \
     # Configure nbdime
     nbdime config-git --enable --global && \
     # Activate Jupytext
-    jupyter nbextension enable --py jupytext --sys-prefix && \
+    # jupyter nbextension enable --py jupytext --sys-prefix && \
     # Enable useful extensions
     jupyter nbextension enable skip-traceback/main --sys-prefix && \
     # jupyter nbextension enable comment-uncomment/main && \
@@ -766,7 +766,7 @@ RUN \
     dpkg-reconfigure --frontend=noninteractive locales && \
     apt-get install -y fcitx && \
     # apt-get install -y fcitx-googlepinyin fcitx-pinyin fcitx-sunpinyin && \
-    apt-get install -y libgsettings-qt-dev qt5-default libqt5qml5 libxss-dev eog libqt5qml5 libqt5quick5 libqt5quickwidgets5 qml-module-qtquick2 && \
+    apt-get install -y libgsettings-qt-dev libqt5qml5 libxss-dev eog libqt5qml5 libqt5quick5 libqt5quickwidgets5 qml-module-qtquick2 && \
     gdebi $RESOURCES_PATH/fcitx-baidupinyin_1.0.1.0_amd64.deb -n && \
     im-config -n fcitx && \
     # Cleanup
@@ -903,9 +903,9 @@ RUN \
     # Needs to be run after patching
     ln -s $RESOURCES_PATH/novnc/vnc.html $RESOURCES_PATH/novnc/index.html &&\
     # Jupyter Branding
-    cp -f $RESOURCES_PATH/branding/logo.png $CONDA_PYTHON_DIR"/dist-packages/notebook/static/base/images/logo.png" && \
-    cp -f $RESOURCES_PATH/branding/favicon.ico $CONDA_PYTHON_DIR"/dist-packages/notebook/static/base/images/favicon.ico" && \
-    cp -f $RESOURCES_PATH/branding/favicon.ico $CONDA_PYTHON_DIR"/dist-packages/notebook/static/favicon.ico" && \
+    # cp -f $RESOURCES_PATH/branding/logo.png $CONDA_PYTHON_DIR"/dist-packages/notebook/static/base/images/logo.png" && \
+    # cp -f $RESOURCES_PATH/branding/favicon.ico $CONDA_PYTHON_DIR"/dist-packages/notebook/static/base/images/favicon.ico" && \
+    # cp -f $RESOURCES_PATH/branding/favicon.ico $CONDA_PYTHON_DIR"/dist-packages/notebook/static/favicon.ico" && \
     # Fielbrowser Branding
     mkdir -p $RESOURCES_PATH"/filebrowser/img/icons/" && \
     cp -f $RESOURCES_PATH/branding/favicon.ico $RESOURCES_PATH"/filebrowser/img/icons/favicon.ico" && \

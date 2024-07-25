@@ -127,7 +127,7 @@ spacy==3.7.2
 #timm==0.9.10
 #tqdm==4.66.1
 # protobuf==4.25.0
-transformers==4.40.0
+transformers==4.33.1
 typing_extensions==4.8.0
 uvicorn==0.24.0.post1
 #xformers==0.0.22.post7
@@ -140,3 +140,4 @@ gradio==4.26.0 # Python library for creating GUIs for machine learning models
 gradio_client==0.15.1 # Gradio client library
 peft==0.11.1 # Parameter Efficient Fine-Tuning
 deepspeed==0.14.4 # DeepSpeed library for distributed training
+timm==0.9.12
