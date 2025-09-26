@@ -27,6 +27,24 @@ USER root
 ### BASICS ###
 # Technical Environment Variables
 
+# RUN \
+#     git clone https://github.com/Dao-AILab/flash-attention.git && \
+#     cd flash-attention && \
+#     git checkout 85881f5  && \
+#     MAX_JOBS=4 python setup.py install && \
+#     pip install -e . && \
+#     rm ../flash-attention -r && \
+#     clean-layer.sh
+
+# RUN \
+#     git clone --recurse-submodules https://github.com/NVIDIA/TransformerEngine.git && \
+#     cd TransformerEngine && \
+#     git checkout 4e7caa1  && \ 
+#     MAX_JOBS=1 python setup.py install && \
+#     pip install -e . && \
+#     rm ../TransformerEngine -r && \
+#     clean-layer.sh
+
 ENV \
     SHELL="/bin/bash" \
     # Nobteook server user: https://github.com/jupyter/docker-stacks/blob/master/base-notebook/Dockerfile#L33
@@ -83,6 +101,10 @@ RUN \
 ENV LC_ALL="en_US.UTF-8" \
     LANG="en_US.UTF-8" \
     LANGUAGE="en_US:en"
+
+RUN pip install --no-cache-dir transformers==4.33.1 timm==0.9.12 && \
+    MAX_JOBS=2 NVTE_BUILD_THREADS_PER_JOB=2 pip install --no-cache-dir --no-build-isolation transformer_engine[pytorch]==1.10.0 && \
+    clean-layer.sh   
 
 # Install basics
 RUN \
@@ -269,28 +291,6 @@ RUN wget --no-verbose https://github.com/krallin/tini/releases/download/v0.19.0/
     chmod -R a+rwx /usr/local/bin/ && \
     # Fix permissions
     fix-permissions.sh $HOME && \
-    # openrest install
-    OPEN_RESTY_VERSION="1.19.9.1" && \
-    mkdir $RESOURCES_PATH"/openresty" && \
-    cd $RESOURCES_PATH"/openresty" && \
-    apt-get update && \
-    apt-get purge -y nginx nginx-common && \
-    # libpcre required, otherwise you get a 'the HTTP rewrite module requires the PCRE library' error
-    # Install apache2-utils to generate user:password file for nginx.
-    apt-get install -y libssl-dev libpcre3 libpcre3-dev apache2-utils && \
-    wget --no-verbose https://openresty.org/download/openresty-$OPEN_RESTY_VERSION.tar.gz  -O ./openresty.tar.gz && \
-    tar xfz ./openresty.tar.gz && \
-    rm ./openresty.tar.gz && \
-    cd ./openresty-$OPEN_RESTY_VERSION/ && \
-    # Surpress output - if there is a problem remove  > /dev/null
-    ./configure --with-http_stub_status_module --with-http_sub_module > /dev/null && \
-    make -j2 > /dev/null && \
-    make install > /dev/null && \
-    # create log dir and file - otherwise openresty will throw an error
-    mkdir -p /var/log/nginx/ && \
-    touch /var/log/nginx/upstream.log && \
-    cd $RESOURCES_PATH && \
-    rm -r $RESOURCES_PATH"/openresty" && \
     # Fix permissions
     chmod -R a+rwx $RESOURCES_PATH && \
     # Cleanup
@@ -298,59 +298,10 @@ RUN wget --no-verbose https://github.com/krallin/tini/releases/download/v0.19.0/
 
 ENV PATH=/usr/local/openresty/nginx/sbin:$PATH
 
-COPY resources/nginx/lua-extensions /etc/nginx/nginx_plugins
+# COPY resources/nginx/lua-extensions /etc/nginx/nginx_plugins
 
 ### END BASICS ###
 
-### RUNTIMES ###
-# Install Miniconda: https://repo.continuum.io/miniconda/
-
-# ENV \
-#     # TODO: CONDA_DIR is deprecated and should be removed in the future
-#     CONDA_DIR=/opt/conda \
-#     CONDA_ROOT=/opt/conda \
-#     PYTHON_VERSION="3.9.10" \
-#     CONDA_PYTHON_DIR=/opt/conda/lib/python3.9 \
-#     MINICONDA_VERSION=4.10.3 \
-#     MINICONDA_MD5=8c69f65a4ae27fb41df0fe552b4a8a3b \
-#     CONDA_VERSION=4.10.3
-
-# RUN wget --no-verbose https://repo.anaconda.com/miniconda/Miniconda3-py39_${CONDA_VERSION}-Linux-x86_64.sh -O ~/miniconda.sh && \
-#     echo "${MINICONDA_MD5} *miniconda.sh" | md5sum -c - && \
-#     /bin/bash ~/miniconda.sh -b -p $CONDA_ROOT && \
-#     export PATH=$CONDA_ROOT/bin:$PATH && \
-#     rm ~/miniconda.sh && \
-#     # Configure conda
-#     # TODO: Add conde-forge as main channel -> remove if testted
-#     # TODO, use condarc file
-#     $CONDA_ROOT/bin/conda config --system --add channels conda-forge && \
-#     $CONDA_ROOT/bin/conda config --system --set auto_update_conda False && \
-#     $CONDA_ROOT/bin/conda config --system --set show_channel_urls True && \
-#     $CONDA_ROOT/bin/conda config --system --set channel_priority strict && \
-#     # Deactivate pip interoperability (currently default), otherwise conda tries to uninstall pip packages
-#     $CONDA_ROOT/bin/conda config --system --set pip_interop_enabled false && \
-#     # Update conda
-#     $CONDA_ROOT/bin/conda update -y -n base -c defaults conda && \
-#     $CONDA_ROOT/bin/conda update -y setuptools && \
-#     $CONDA_ROOT/bin/conda install -y conda-build && \
-#     # Update selected packages - install python 3.8.x
-#     $CONDA_ROOT/bin/conda install -y --update-all python=$PYTHON_VERSION && \
-#     # Link Conda
-#     ln -s $CONDA_ROOT/bin/python /usr/local/bin/python && \
-#     ln -s $CONDA_ROOT/bin/conda /usr/bin/conda && \
-#     # Update
-#     $CONDA_ROOT/bin/conda install -y pip && \
-#     $CONDA_ROOT/bin/pip install --upgrade pip && \
-#     chmod -R a+rwx /usr/local/bin/ && \
-#     # Cleanup - Remove all here since conda is not in path as of now
-#     # find /opt/conda/ -follow -type f -name '*.a' -delete && \
-#     # find /opt/conda/ -follow -type f -name '*.js.map' -delete && \
-#     $CONDA_ROOT/bin/conda clean -y --packages && \
-#     $CONDA_ROOT/bin/conda clean -y -a -f  && \
-#     $CONDA_ROOT/bin/conda build purge-all && \
-#     # Fix permissions
-#     fix-permissions.sh $CONDA_ROOT && \
-#     clean-layer.sh
 
 # ENV PATH=$CONDA_ROOT/bin:$PATH
 
@@ -511,25 +462,10 @@ RUN \
     # Cleanup
     clean-layer.sh
 
-# Install Web Tools - Offered via Jupyter Tooling Plugin
-
-## VS Code Server: https://github.com/codercom/code-server
-COPY resources/tools/vs-code-server.sh $RESOURCES_PATH/tools/vs-code-server.sh
-RUN \
-    /bin/bash $RESOURCES_PATH/tools/vs-code-server.sh --install && \
-    # Cleanup
-    clean-layer.sh
 
 COPY resources/tools/pycharm.sh $RESOURCES_PATH/tools/pycharm.sh
 RUN \
     /bin/bash $RESOURCES_PATH/tools/pycharm.sh && \
-    # Cleanup
-    clean-layer.sh
-
-## ungit
-COPY resources/tools/ungit.sh $RESOURCES_PATH/tools/ungit.sh
-RUN \
-    /bin/bash $RESOURCES_PATH/tools/ungit.sh --install && \
     # Cleanup
     clean-layer.sh
 
@@ -541,13 +477,6 @@ RUN \
 #     clean-layer.sh
 
 ## Glances webtool is installed in python section below via requirements.txt
-
-## Filebrowser
-COPY resources/tools/filebrowser.sh $RESOURCES_PATH/tools/filebrowser.sh
-RUN \
-    /bin/bash $RESOURCES_PATH/tools/filebrowser.sh --install && \
-    # Cleanup
-    clean-layer.sh
 
 ARG ARG_WORKSPACE_FLAVOR="minimal"
 ENV WORKSPACE_FLAVOR=$ARG_WORKSPACE_FLAVOR
@@ -580,163 +509,7 @@ RUN \
 
 ### DATA SCIENCE BASICS ###
 
-
-
 ### END DATA SCIENCE BASICS ###
-
-### JUPYTER ###
-
-COPY \
-    resources/jupyter/start.sh \
-    resources/jupyter/start-notebook.sh \
-    resources/jupyter/start-singleuser.sh \
-    /usr/local/bin/
-
-# Configure Jupyter / JupyterLab
-# Add as jupyter system configuration
-COPY resources/jupyter/nbconfig /etc/jupyter/nbconfig
-COPY resources/jupyter/jupyter_notebook_config.json /etc/jupyter/
-
-# install jupyter extensions
-RUN \
-    # Create empty notebook configuration
-    mkdir -p $HOME/.jupyter/nbconfig/ && \
-    printf "{\"load_extensions\": {}}" > $HOME/.jupyter/nbconfig/notebook.json && \
-    pip --no-cache-dir install jupyter_contrib_nbextensions nbdime && \
-    # Activate and configure extensions
-    jupyter contrib nbextension install --sys-prefix && \
-    # nbextensions configurator
-    jupyter nbextensions_configurator enable --sys-prefix && \
-    # Configure nbdime
-    nbdime config-git --enable --global && \
-    # Activate Jupytext
-    jupyter nbextension enable --py jupytext --sys-prefix && \
-    # Enable useful extensions
-    jupyter nbextension enable skip-traceback/main --sys-prefix && \
-    # jupyter nbextension enable comment-uncomment/main && \
-    jupyter nbextension enable toc2/main --sys-prefix && \
-    jupyter nbextension enable execute_time/ExecuteTime --sys-prefix && \
-    jupyter nbextension enable collapsible_headings/main --sys-prefix && \
-    jupyter nbextension enable codefolding/main --sys-prefix && \
-    # Disable pydeck extension, cannot be loaded (404)
-    jupyter nbextension disable pydeck/extension && \
-    # Install and activate Jupyter Tensorboard
-    pip install --no-cache-dir git+https://github.com/InfuseAI/jupyter_tensorboard.git && \
-    jupyter tensorboard enable --sys-prefix && \
-    # TODO moved to configuration files = resources/jupyter/nbconfig Edit notebook config
-    # echo '{"nbext_hide_incompat": false}' > $HOME/.jupyter/nbconfig/common.json && \
-    cat $HOME/.jupyter/nbconfig/notebook.json | jq '.toc2={"moveMenuLeft": false,"widenNotebook": false,"skip_h1_title": false,"sideBar": true,"number_sections": false,"collapse_to_match_collapsible_headings": true}' > tmp.$$.json && mv tmp.$$.json $HOME/.jupyter/nbconfig/notebook.json && \
-    # If minimal flavor - exit here
-    if [ "$WORKSPACE_FLAVOR" = "minimal" ]; then \
-        # Cleanup
-        clean-layer.sh && \
-        exit 0 ; \
-    fi && \
-    # TODO: Not installed. Disable Jupyter Server Proxy
-    # jupyter nbextension disable jupyter_server_proxy/tree --sys-prefix && \
-    # Install jupyter black
-    jupyter nbextension install https://github.com/drillan/jupyter-black/archive/master.zip --sys-prefix && \
-    jupyter nbextension enable jupyter-black-master/jupyter-black --sys-prefix && \
-    # If light flavor - exit here
-    if [ "$WORKSPACE_FLAVOR" = "light" ]; then \
-        # Cleanup
-        clean-layer.sh && \
-        exit 0 ; \
-    fi && \
-    # Install and activate what if tool
-    pip install witwidget && \
-    jupyter nbextension install --py --symlink --sys-prefix witwidget && \
-    jupyter nbextension enable --py --sys-prefix witwidget && \
-    # Activate qgrid
-    jupyter nbextension enable --py --sys-prefix qgrid && \
-    # TODO: Activate Colab support
-    # jupyter serverextension enable --py jupyter_http_over_ws && \
-    # Activate Voila Rendering
-    # currently not working jupyter serverextension enable voila --sys-prefix && \
-    # Enable ipclusters
-    ipcluster nbextension enable && \
-    # Fix permissions? fix-permissions.sh $CONDA_ROOT && \
-    # Cleanup
-    clean-layer.sh
-
-
-# Install Jupyter Tooling Extension
-COPY resources/jupyter/extensions $RESOURCES_PATH/jupyter-extensions
-
-RUN \
-    pip install --no-cache-dir $RESOURCES_PATH/jupyter-extensions/tooling-extension/ && \
-    # Cleanup
-    clean-layer.sh
-
-# Install Git LFS
-COPY resources/tools/git-lfs.sh $RESOURCES_PATH/tools/git-lfs.sh
-
-RUN \
-    /bin/bash $RESOURCES_PATH/tools/git-lfs.sh --install && \
-    # Cleanup
-    clean-layer.sh
-
-### VSCODE ###
-
-# Install vscode extension
-# https://github.com/cdr/code-server/issues/171
-# Alternative install: /usr/local/bin/code-server --user-data-dir=$HOME/.config/Code/ --extensions-dir=$HOME/.vscode/extensions/ --install-extension ms-python-release && \
-RUN \
-    SLEEP_TIMER=25 && \
-    mkdir -p $HOME/.vscode/extensions/ && \
-    # If minimal flavor -> exit here
-    if [ "$WORKSPACE_FLAVOR" = "minimal" ]; then \
-        exit 0 ; \
-    fi && \
-    cd $RESOURCES_PATH && \
-    mkdir -p $HOME/.vscode/extensions/ && \
-    # Install vs code jupyter - required by python extension
-    VS_JUPYTER_VERSION="2023.1.2000312134" && \
-    wget --retry-on-http-error=429 --waitretry 15 --tries 5 --no-verbose https://marketplace.visualstudio.com/_apis/public/gallery/publishers/ms-toolsai/vsextensions/jupyter/$VS_JUPYTER_VERSION/vspackage -O ms-toolsai.jupyter-$VS_JUPYTER_VERSION.vsix && \
-    bsdtar -xf ms-toolsai.jupyter-$VS_JUPYTER_VERSION.vsix extension && \
-    rm ms-toolsai.jupyter-$VS_JUPYTER_VERSION.vsix && \
-    mv extension $HOME/.vscode/extensions/ms-toolsai.jupyter-$VS_JUPYTER_VERSION && \
-    sleep $SLEEP_TIMER && \
-    # Install python extension - (newer versions are 30MB bigger)
-    VS_PYTHON_VERSION="2021.12.1559732655" && \
-    wget --no-verbose https://github.com/microsoft/vscode-python/releases/download/$VS_PYTHON_VERSION/ms-python-release.vsix && \
-    bsdtar -xf ms-python-release.vsix extension && \
-    rm ms-python-release.vsix && \
-    mv extension $HOME/.vscode/extensions/ms-python.python-$VS_PYTHON_VERSION && \
-    # && code-server --install-extension ms-python.python@$VS_PYTHON_VERSION \
-    sleep $SLEEP_TIMER && \
-    # If light flavor -> exit here
-    # if [ "$WORKSPACE_FLAVOR" = "light" ]; then \
-    #     exit 0 ; \
-    # fi && \
-    # Install prettie: https://github.com/prettier/prettier-vscode/releases
-    PRETTIER_VERSION="9.1.1" && \
-    wget --no-verbose https://github.com/prettier/prettier-vscode/releases/download/v$PRETTIER_VERSION/prettier-vscode-$PRETTIER_VERSION.vsix && \
-    bsdtar -xf prettier-vscode-$PRETTIER_VERSION.vsix extension && \
-    rm prettier-vscode-$PRETTIER_VERSION.vsix && \
-    mv extension $HOME/.vscode/extensions/prettier-vscode-$PRETTIER_VERSION.vsix && \
-    # Install code runner: https://github.com/formulahendry/vscode-code-runner/releases/latest
-    VS_CODE_RUNNER_VERSION="0.9.17" && \
-    wget --no-verbose https://github.com/formulahendry/vscode-code-runner/releases/download/$VS_CODE_RUNNER_VERSION/code-runner-$VS_CODE_RUNNER_VERSION.vsix && \
-    bsdtar -xf code-runner-$VS_CODE_RUNNER_VERSION.vsix extension && \
-    rm code-runner-$VS_CODE_RUNNER_VERSION.vsix && \
-    mv extension $HOME/.vscode/extensions/code-runner-$VS_CODE_RUNNER_VERSION && \
-    # && code-server --install-extension formulahendry.code-runner@$VS_CODE_RUNNER_VERSION \
-    sleep $SLEEP_TIMER && \
-    # Install ESLint extension: https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint
-    VS_ESLINT_VERSION="2.2.3" && \
-    wget --retry-on-http-error=429 --waitretry 15 --tries 5 --no-verbose https://marketplace.visualstudio.com/_apis/public/gallery/publishers/dbaeumer/vsextensions/vscode-eslint/$VS_ESLINT_VERSION/vspackage -O dbaeumer.vscode-eslint.vsix && \
-    # && wget --no-verbose https://github.com/microsoft/vscode-eslint/releases/download/$VS_ESLINT_VERSION-insider.2/vscode-eslint-$VS_ESLINT_VERSION.vsix -O dbaeumer.vscode-eslint.vsix && \
-    bsdtar -xf dbaeumer.vscode-eslint.vsix extension && \
-    rm dbaeumer.vscode-eslint.vsix && \
-    mv extension $HOME/.vscode/extensions/dbaeumer.vscode-eslint-$VS_ESLINT_VERSION.vsix && \
-    # && code-server --install-extension dbaeumer.vscode-eslint@$VS_ESLINT_VERSION \
-    # Fix permissions
-    fix-permissions.sh $HOME/.vscode/extensions/ && \
-    # Cleanup
-    clean-layer.sh
-
-### END VSCODE ###
 
     
 # Install and activate ZSH
@@ -817,32 +590,13 @@ RUN \
 RUN pip install --no-cache-dir --upgrade --upgrade-strategy only-if-needed -r ${RESOURCES_PATH}/libraries/requirements-minimal.txt && \
     clean-layer.sh
 
-RUN pip install --no-cache-dir transformers==4.33.1 timm==0.9.12 && \
-    clean-layer.sh   
-
-RUN \
-    git clone https://github.com/Dao-AILab/flash-attention.git && \
-    cd flash-attention && \
-    git checkout 85881f5  && \
-    MAX_JOBS=4 python setup.py install && \
-    pip install -e . && \
-    rm ../flash-attention -r && \
-    clean-layer.sh
-
-RUN \
-    git clone --recurse-submodules https://github.com/NVIDIA/TransformerEngine.git && \
-    cd TransformerEngine && \
-    git checkout 4e7caa1  && \ 
-    MAX_JOBS=4 python setup.py install && \
-    pip install -e . && \
-    rm ../TransformerEngine -r && \
-    clean-layer.sh
 
 
-ARG ARG_ROS_FLAVOR="all" \
-    ROS_DISTRO=noetic \
-    ROS2_DISTRO=galactic \
-    INSTALL_PACKAGE=desktop 
+
+# ARG ARG_ROS_FLAVOR="all" \
+#     ROS_DISTRO=noetic \
+#     ROS2_DISTRO=galactic \
+#     INSTALL_PACKAGE=desktop 
 
 # RUN \
 #     if [ "$ARG_ROS_FLAVOR" = "all" ] || [ "$ARG_ROS_FLAVOR" = "ros" ]; then \
@@ -888,7 +642,7 @@ COPY resources/home/ $HOME/
 
 # Copy some configuration files
 COPY resources/ssh/ssh_config resources/ssh/sshd_config  /etc/ssh/
-COPY resources/nginx/nginx.conf /etc/nginx/nginx.conf
+# COPY resources/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY resources/config/xrdp.ini /etc/xrdp/xrdp.ini
 
 # Configure supervisor process
@@ -898,19 +652,6 @@ COPY resources/supervisor/programs/ /etc/supervisor/conf.d/
 
 # Assume yes to all apt commands, to avoid user confusion around stdin.
 COPY resources/config/90assumeyes /etc/apt/apt.conf.d/
-
-# Add tensorboard patch - use tensorboard jupyter plugin instead of the actual tensorboard magic
-COPY resources/jupyter/tensorboard_notebook_patch.py $CONDA_PYTHON_DIR/dist-packages/tensorboard/notebook.py
-
-# Additional jupyter configuration
-COPY resources/jupyter/jupyter_notebook_config.py /etc/jupyter/
-COPY resources/jupyter/sidebar.jupyterlab-settings $HOME/.jupyter/lab/user-settings/@jupyterlab/application-extension/
-COPY resources/jupyter/plugin.jupyterlab-settings $HOME/.jupyter/lab/user-settings/@jupyterlab/extensionmanager-extension/
-COPY resources/jupyter/ipython_config.py /etc/ipython/ipython_config.py
-
-# Configure netdata
-COPY resources/netdata/ /etc/netdata/
-COPY resources/netdata/cloud.conf /var/lib/netdata/cloud.d/cloud.conf
 
 # openp2p
 COPY resources/tools/openp2p.sh $RESOURCES_PATH/tools/openp2p.sh
@@ -924,16 +665,6 @@ RUN \
     ## create index.html to forward automatically to `vnc.html`
     # Needs to be run after patching
     ln -s $RESOURCES_PATH/novnc/vnc.html $RESOURCES_PATH/novnc/index.html &&\
-    # Jupyter Branding
-    cp -f $RESOURCES_PATH/branding/logo.png $CONDA_PYTHON_DIR"/dist-packages/notebook/static/base/images/logo.png" && \
-    cp -f $RESOURCES_PATH/branding/favicon.ico $CONDA_PYTHON_DIR"/dist-packages/notebook/static/base/images/favicon.ico" && \
-    cp -f $RESOURCES_PATH/branding/favicon.ico $CONDA_PYTHON_DIR"/dist-packages/notebook/static/favicon.ico" && \
-    # Fielbrowser Branding
-    mkdir -p $RESOURCES_PATH"/filebrowser/img/icons/" && \
-    cp -f $RESOURCES_PATH/branding/favicon.ico $RESOURCES_PATH"/filebrowser/img/icons/favicon.ico" && \
-    cp -f $RESOURCES_PATH/branding/favicon.ico $RESOURCES_PATH"/filebrowser/img/icons/favicon-32x32.png" && \
-    cp -f $RESOURCES_PATH/branding/favicon.ico $RESOURCES_PATH"/filebrowser/img/icons/favicon-16x16.png" && \
-    cp -f $RESOURCES_PATH/branding/ml-workspace-logo.svg $RESOURCES_PATH"/filebrowser/img/logo.svg" && \
     # Configure git
     git config --global core.fileMode false && \
     git config --global http.sslVerify false && \
@@ -966,9 +697,6 @@ RUN \
     chmod -R a+rwx /usr/share/applications/ && \
     ln -s $RESOURCES_PATH/tools/ $HOME/Desktop/Tools && \
     ln -s $WORKSPACE_HOME $HOME/Desktop/workspace && \
-    chmod a+rwx /usr/local/bin/start-notebook.sh && \
-    chmod a+rwx /usr/local/bin/start.sh && \
-    chmod a+rwx /usr/local/bin/start-singleuser.sh && \
     chown $NB_USER:$NB_USER /tmp && \
     chmod 1777 /tmp && \
     # TODO: does 1777 work fine? 
@@ -976,9 +704,7 @@ RUN \
     # Set /workspace as default directory to navigate to as root user
     echo 'cd '$WORKSPACE_HOME >> $HOME/.bashrc && \
     # printf "\necho \"choose ros neotic(1) or ros2 galactic(2) or none:\"\nread edition\n if [ \"\$edition\" ] && [ \"\$edition\" -eq \"1\" ]; then \n  source /opt/ros/noetic/setup.bash \n  export ROS_HOSTNAME=localhost \n  export ROSMASTER_URI=http://localhost:11311 \n  export ROS_IP=\'hostname -I\' \n  echo -e \"\\\\033[33mros environment\\\\033[0m \" \nelif [ \"\$edition\" ] && [ \"\$edition\" -eq \"2\" ]; then \n  source /opt/ros/galactic/setup.bash \n  echo -e \"\\\\033[32mros2 environment\\\\033[0m\" \nelse\n  echo -e \"\\\\033[35mnone ros environment\\\\033[0m\" \nfi" >> $HOME/.bashrc && \
-    chown root:root /usr/bin/sudo && chmod 4755 /usr/bin/sudo && \
-    rm /usr/local/etc/jupyter/jupyter_notebook_config.py && \
-    rm /opt/pytorch/jupyter_notebook_config.py
+    chown root:root /usr/bin/sudo && chmod 4755 /usr/bin/sudo 
 
 # MKL and Hardware Optimization
 # Fix problem with MKL with duplicated libiomp5: https://github.com/dmlc/xgboost/issues/1715
@@ -1020,7 +746,6 @@ ENV KMP_DUPLICATE_LIB_OK="True" \
     CONFIG_BACKUP_ENABLED="true" \
     SHUTDOWN_INACTIVE_KERNELS="false" \
     SHARED_LINKS_ENABLED="true" \
-    AUTHENTICATE_VIA_JUPYTER="false" \
     DATA_ENVIRONMENT=$WORKSPACE_HOME"/environment" \
     WORKSPACE_BASE_URL="/" \
     INCLUDE_TUTORIALS="true" \
@@ -1042,42 +767,42 @@ ARG ARG_BUILD_DATE="unknown" \
     ARG_WORKSPACE_VERSION="unknown"
 ENV WORKSPACE_VERSION=$ARG_WORKSPACE_VERSION 
 
-# Overwrite & add Labels
-LABEL \
-    "maintainer"="mltooling.team@gmail.com" \
-    "workspace.version"=$WORKSPACE_VERSION \
-    "workspace.flavor"=$WORKSPACE_FLAVOR \
-    # Kubernetes Labels
-    "io.k8s.description"="All-in-one web-based development environment for machine learning." \
-    "io.k8s.display-name"="Machine Learning Workspace" \
-    # Openshift labels: https://docs.okd.io/latest/creating_images/metadata.html
-    "io.openshift.expose-services"="8080:http, 5901:xvnc" \
-    "io.openshift.non-scalable"="true" \
-    "io.openshift.tags"="workspace, machine learning, vnc, ubuntu, xfce" \
-    "io.openshift.min-memory"="1Gi" \
-    # Open Container labels: https://github.com/opencontainers/image-spec/blob/master/annotations.md
-    "org.opencontainers.image.title"="Machine Learning Workspace" \
-    "org.opencontainers.image.description"="All-in-one web-based development environment for machine learning." \
-    "org.opencontainers.image.documentation"="https://github.com/ml-tooling/ml-workspace" \
-    "org.opencontainers.image.url"="https://github.com/ml-tooling/ml-workspace" \
-    "org.opencontainers.image.source"="https://github.com/ml-tooling/ml-workspace" \
-    # "org.opencontainers.image.licenses"="Apache-2.0" \
-    "org.opencontainers.image.version"=$WORKSPACE_VERSION \
-    "org.opencontainers.image.vendor"="ML Tooling" \
-    "org.opencontainers.image.authors"="Lukas Masuch & Benjamin Raethlein" \
-    "org.opencontainers.image.revision"=$ARG_VCS_REF \
-    "org.opencontainers.image.created"=$ARG_BUILD_DATE \
-    # Label Schema Convention (deprecated): http://label-schema.org/rc1/
-    "org.label-schema.name"="Machine Learning Workspace" \
-    "org.label-schema.description"="All-in-one web-based development environment for machine learning." \
-    "org.label-schema.usage"="https://github.com/ml-tooling/ml-workspace" \
-    "org.label-schema.url"="https://github.com/ml-tooling/ml-workspace" \
-    "org.label-schema.vcs-url"="https://github.com/ml-tooling/ml-workspace" \
-    "org.label-schema.vendor"="ML Tooling" \
-    "org.label-schema.version"=$WORKSPACE_VERSION \
-    "org.label-schema.schema-version"="1.0" \
-    "org.label-schema.vcs-ref"=$ARG_VCS_REF \
-    "org.label-schema.build-date"=$ARG_BUILD_DATE
+# # Overwrite & add Labels
+# LABEL \
+#     "maintainer"="mltooling.team@gmail.com" \
+#     "workspace.version"=$WORKSPACE_VERSION \
+#     "workspace.flavor"=$WORKSPACE_FLAVOR \
+#     # Kubernetes Labels
+#     "io.k8s.description"="All-in-one web-based development environment for machine learning." \
+#     "io.k8s.display-name"="Machine Learning Workspace" \
+#     # Openshift labels: https://docs.okd.io/latest/creating_images/metadata.html
+#     "io.openshift.expose-services"="8080:http, 5901:xvnc" \
+#     "io.openshift.non-scalable"="true" \
+#     "io.openshift.tags"="workspace, machine learning, vnc, ubuntu, xfce" \
+#     "io.openshift.min-memory"="1Gi" \
+#     # Open Container labels: https://github.com/opencontainers/image-spec/blob/master/annotations.md
+#     "org.opencontainers.image.title"="Machine Learning Workspace" \
+#     "org.opencontainers.image.description"="All-in-one web-based development environment for machine learning." \
+#     "org.opencontainers.image.documentation"="https://github.com/ml-tooling/ml-workspace" \
+#     "org.opencontainers.image.url"="https://github.com/ml-tooling/ml-workspace" \
+#     "org.opencontainers.image.source"="https://github.com/ml-tooling/ml-workspace" \
+#     # "org.opencontainers.image.licenses"="Apache-2.0" \
+#     "org.opencontainers.image.version"=$WORKSPACE_VERSION \
+#     "org.opencontainers.image.vendor"="ML Tooling" \
+#     "org.opencontainers.image.authors"="Lukas Masuch & Benjamin Raethlein" \
+#     "org.opencontainers.image.revision"=$ARG_VCS_REF \
+#     "org.opencontainers.image.created"=$ARG_BUILD_DATE \
+#     # Label Schema Convention (deprecated): http://label-schema.org/rc1/
+#     "org.label-schema.name"="Machine Learning Workspace" \
+#     "org.label-schema.description"="All-in-one web-based development environment for machine learning." \
+#     "org.label-schema.usage"="https://github.com/ml-tooling/ml-workspace" \
+#     "org.label-schema.url"="https://github.com/ml-tooling/ml-workspace" \
+#     "org.label-schema.vcs-url"="https://github.com/ml-tooling/ml-workspace" \
+#     "org.label-schema.vendor"="ML Tooling" \
+#     "org.label-schema.version"=$WORKSPACE_VERSION \
+#     "org.label-schema.schema-version"="1.0" \
+#     "org.label-schema.vcs-ref"=$ARG_VCS_REF \
+#     "org.label-schema.build-date"=$ARG_BUILD_DATE
 
 # Removed - is run during startup since a few env variables are dynamically changed: RUN printenv > /root/.ssh/environment
 
@@ -1087,21 +812,18 @@ LABEL \
 # TODO: WORKDIR /workspace?
 
 
-
 USER $NB_USER
 
 RUN \
     sudo chmod 777 $HOME/ -R &&\
     sudo chown ml:ml $HOME/ -R &&\
-    sudo chmod 777 /etc/nginx/ -R &&\
     sudo chown root:crontab /usr/bin/crontab &&\
     sudo chmod 2755 /usr/bin/crontab &&\
     sudo chmod 777 /var/log/supervisor/ -R &&\
     sudo chmod 777 /var/run -R &&\
     sudo chmod 400 /var/run/sshd && \
-    sudo chmod 777 /usr/local/openresty/nginx -R &&\
     sudo chmod 777 /var/log -R &&\
-    sudo chmod g-w,o-w .oh-my-zsh -R
+    sudo chmod g-w,o-w .oh-my-zsh -R 
 
 # use global option with tini to kill full process groups: https://github.com/krallin/tini#process-group-killing
 ENTRYPOINT ["/tini", "-g", "--"]
@@ -1111,7 +833,6 @@ CMD ["python", "/resources/docker-entrypoint.py"]
 # Port 8080 is the main access port (also includes SSH)
 # Port 5091 is the VNC port
 # Port 3389 is the RDP port
-# Port 8090 is the Jupyter Notebook Server
 # See supervisor.conf for more ports
 
 EXPOSE 8080

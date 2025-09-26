@@ -1,0 +1,23 @@
+{
+  "listen_port": 8080,
+  "rules": [
+    {
+      "name": "HTTP服务",
+      "protocol": "http",
+      "target_host": "127.0.0.1",
+      "target_port": 6901,
+      "pattern": "GET|POST|PUT|DELETE|HEAD|OPTIONS|PATCH",
+      "description": "HTTP协议转发到8090端口"
+    },
+    {
+      "name": "SSH服务",
+      "protocol": "ssh",
+      "target_host": "127.0.0.1",
+      "target_port": 22,
+      "pattern": "SSH-",
+      "description": "SSH协议转发到22端口"
+    }
+  ],
+  "timeout": 30,
+  "log_level": "INFO"
+}

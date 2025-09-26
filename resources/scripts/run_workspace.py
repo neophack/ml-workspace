@@ -40,12 +40,6 @@ call("python " + ENV_RESOURCES_PATH + "/scripts/backup_restore_config.py restore
 log.info("Configure ssh service")
 call("sudo python " + ENV_RESOURCES_PATH + "/scripts/configure_ssh.py", shell=True)
 
-log.info("Configure nginx service")
-call("sudo python " + ENV_RESOURCES_PATH + "/scripts/configure_nginx.py", shell=True)
-
-log.info("Configure tools")
-call("python " + ENV_RESOURCES_PATH + "/scripts/configure_tools.py", shell=True)
-
 log.info("Configure cron scripts")
 call("python " + ENV_RESOURCES_PATH + "/scripts/configure_cron_scripts.py", shell=True)
 
