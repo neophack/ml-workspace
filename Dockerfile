@@ -3,7 +3,6 @@
 # Minimal desktop image:
 #   - xfce4 desktop
 #   - TigerVNC + noVNC (websockify)
-#   - VS Code
 #   - fcitx + 百度拼音输入法
 #   - SSH (single-port multiplexed with noVNC via oneport)
 #
@@ -155,7 +154,7 @@ RUN \
         xfce4-taskmanager \
         # deps to enable vncserver
         xauth xinit dbus-x11 \
-        # X11 / GTK libs required by VS Code and other GUI apps
+        # X11 / GTK libs required by GUI apps in the desktop
         libxdamage1 libxext6 libxfixes3 libxkbcommon0 libxkbfile1 \
         libxrandr2 libxss1 libasound2 libgtk-3-0 libgbm1 libnss3 libnspr4 \
         # icon themes: xsettings.xml pins IconThemeName=gnome, so the gnome
@@ -179,12 +178,6 @@ RUN \
     wget -qO- https://github.com/novnc/websockify/archive/v0.10.0.tar.gz | tar xz --strip 1 -C ./novnc/utils/websockify && \
     mkdir -p $HOME/.vnc && \
     fix-permissions.sh ${RESOURCES_PATH} && \
-    clean-layer.sh
-
-# Install Visual Studio Code
-COPY resources/tools/vs-code-desktop.sh $RESOURCES_PATH/tools/vs-code-desktop.sh
-RUN \
-    /bin/bash $RESOURCES_PATH/tools/vs-code-desktop.sh --install && \
     clean-layer.sh
 
 ### END GUI TOOLS ###
@@ -215,7 +208,7 @@ RUN \
 # Copy resources into workspace (this overrides noVNC vnc.html / app/ui.js with our customized versions)
 COPY ["resources/", "$RESOURCES_PATH/"]
 
-# Configure Home folder (xfce, fcitx, code)
+# Configure Home folder (xfce, fcitx)
 COPY resources/home/ $HOME/
 
 # Copy ssh configuration files
@@ -246,6 +239,8 @@ RUN \
     mkdir -p $HOME/Desktop && \
     ln -s $RESOURCES_PATH/tools/ $HOME/Desktop/Tools && \
     ln -s $WORKSPACE_HOME $HOME/Desktop/workspace && \
+    # mark desktop shortcuts as trusted (executable) launchers
+    chmod a+x $HOME/Desktop/*.desktop 2>/dev/null || true && \
     chown $NB_USER:$NB_USER /tmp && \
     chmod 1777 /tmp && \
     chmod a+rwx /tmp && \
