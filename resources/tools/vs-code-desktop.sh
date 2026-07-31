@@ -39,6 +39,11 @@ fi
 # Run
 if [ $INSTALL_ONLY = 0 ] ; then
     echo "Starting VS Code"
-    /usr/share/code/code --no-sandbox --unity-launch $WORKSPACE_HOME
+    # --disable-gpu / --disable-software-rasterizer: under TigerVNC there is no
+    # real GPU available to the renderer, and Chromium's GPU/EGL path crashes the
+    # window (reason: 'crashed', code: '5'). Force software rendering so VS Code
+    # opens reliably in the noVNC desktop regardless of the opened folder.
+    /usr/share/code/code --no-sandbox --unity-launch \
+        --disable-gpu --disable-software-rasterizer $WORKSPACE_HOME
     sleep 10
 fi

@@ -95,3 +95,4 @@ hs_err_pid*
 *.swo
 temp/*
 .DS_Store
+.zcode/

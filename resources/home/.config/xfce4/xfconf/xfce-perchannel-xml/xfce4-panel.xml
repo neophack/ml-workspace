@@ -31,7 +31,7 @@
       <property name="show-menu-icons" type="bool" value="true"/>
       <property name="show-tooltips" type="bool" value="false"/>
       <property name="show-generic-names" type="bool" value="false"/>
-      <property name="button-icon" type="string" value="go-home"/>
+      <property name="button-icon" type="string" value="start-here"/>
     </property>
     <property name="plugin-3" type="string" value="tasklist"/>
     <property name="plugin-15" type="string" value="separator">

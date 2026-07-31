@@ -61,4 +61,18 @@ else
     echo "[configure-novnc-title] WARNING: ${VNC_HTML} not found" >&2
 fi
 
+# --- Rewrite the visible brand block in vnc.html ----------------------------
+# Replaces the text inside the two brand divs (main title + host info).
+# Idempotent: the regex anchors on the stable div ids, so it matches the
+# structure rather than the rendered value. This keeps working across restarts
+# even when hostname/IP change.
+if [ -f "${VNC_HTML}" ]; then
+    ESC_BRAND_TITLE="$(esc_for_sed "${TITLE_BASE}")"
+    ESC_BRAND_SUB="$(esc_for_sed "${CONTAINER_NAME} @ ${CONTAINER_IP}")"
+    sed -i -E \
+        -e "s|(<div id=\"noVNC_brand_title\"[^>]*>)[^<]*(</div>)|\1${ESC_BRAND_TITLE}\2|" \
+        -e "s|(<div id=\"noVNC_brand_subtitle\"[^>]*>)[^<]*(</div>)|\1${ESC_BRAND_SUB}\2|" \
+        "${VNC_HTML}"
+fi
+
 exit 0

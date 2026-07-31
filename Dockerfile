@@ -157,7 +157,11 @@ RUN \
         xauth xinit dbus-x11 \
         # X11 / GTK libs required by VS Code and other GUI apps
         libxdamage1 libxext6 libxfixes3 libxkbcommon0 libxkbfile1 \
-        libxrandr2 libxss1 libasound2 libgtk-3-0 libgbm1 libnss3 libnspr4 && \
+        libxrandr2 libxss1 libasound2 libgtk-3-0 libgbm1 libnss3 libnspr4 \
+        # icon themes: xsettings.xml pins IconThemeName=gnome, so the gnome
+        # theme (and its hicolor/adwaita fallbacks) must be installed, otherwise
+        # panel launchers and menu icons render as broken placeholders.
+        gnome-icon-theme adwaita-icon-theme hicolor-icon-theme && \
     # deb installer (needed for fcitx baidu pinyin)
     apt-get install -y --no-install-recommends gdebi-core && \
     apt-get purge -y pm-utils xscreensaver* && \
@@ -245,8 +249,11 @@ RUN \
     chown $NB_USER:$NB_USER /tmp && \
     chmod 1777 /tmp && \
     chmod a+rwx /tmp && \
-    # Set /workspace as default directory to navigate to
-    echo 'cd '$WORKSPACE_HOME >> $HOME/.bashrc && \
+    # Set /workspace as default directory to navigate to.
+    # ~/.bashrc is shipped from resources/home/ and already cd's to
+    # /workspace, so this only acts as a fallback if that file is replaced.
+    grep -q "cd $WORKSPACE_HOME" $HOME/.bashrc 2>/dev/null || \
+        echo 'cd '$WORKSPACE_HOME >> $HOME/.bashrc && \
     chown root:root /usr/bin/sudo && chmod 4755 /usr/bin/sudo
 
 # Environment variables for VNC and workspace

@@ -276,6 +276,10 @@
     <div class="noVNC_center">
         <div id="noVNC_connect_dlg">
             <!-- CUSTOM CODE: Replace logo and connect button -->
+            <!-- Brand block: rewritten at container startup by
+                 scripts/configure-novnc-title.sh (NOVNC_TITLE + hostname @ IP).
+                 The two divs below are matched by their stable id attributes, so
+                 the rewrite stays idempotent across restarts. -->
             <h1
             id="noVNC_logo"
             style="
@@ -287,7 +291,8 @@
                 font-size: 120px;
             "
             >
-            Torch 2.1<br />Desktop<br />VNC
+            <div id="noVNC_brand_title" style="font-size:120px;line-height:1;">Desktop</div>
+            <div id="noVNC_brand_subtitle" style="font-size:30px;line-height:1.2;margin-top:18px;opacity:0.92;">unknown @ unknown</div>
             </h1>
             <div
             id="noVNC_connect_button"

@@ -5,5 +5,8 @@
   "extensions.autoUpdate": false,
   "extensions.autoCheckUpdates": false,
   "window.menuBarVisibility": "visible",
-  "workbench.colorTheme": "Default Dark+"
+  "workbench.colorTheme": "Default Dark+",
+  // The desktop runs under TigerVNC with no real GPU exposed to the renderer.
+  "terminal.integrated.gpuAcceleration": "off",
+  "editor.gpuAcceleration": "off"
 }
