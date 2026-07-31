@@ -1,18 +1,23 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 """
-Configure and run tools
+Configure and run services (minimal cuda-runtime flavor).
+
+Only configures SSH and then starts supervisord, which manages:
+  - vncserver (TigerVNC)
+  - novnc (websockify web client)
+  - sshd
+  - oneport (single-port multiplexing of noVNC HTTP + SSH)
 """
 
 from subprocess import call
 import os
 import sys
 
-# Enable logging
 import logging
 logging.basicConfig(
-    format='%(asctime)s [%(levelname)s] %(message)s', 
-    level=logging.INFO, 
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    level=logging.INFO,
     stream=sys.stdout)
 
 log = logging.getLogger(__name__)
@@ -21,39 +26,15 @@ log.info("Start Workspace")
 
 ENV_RESOURCES_PATH = os.getenv("RESOURCES_PATH", "/resources")
 
-ENV_OPENP2P_TOKEN = os.getenv("OPENP2P_TOKEN", "")
-
-# Include tutorials 
-WORKSPACE_HOME = os.getenv('WORKSPACE_HOME', "/workspace")
-INCLUDE_TUTORIALS = os.getenv('INCLUDE_TUTORIALS', "true")
-
-# Only copy all content of tutorial folder to workspace folder if it is initialy empty
-if INCLUDE_TUTORIALS.lower() == "true" and os.path.exists(WORKSPACE_HOME) and len(os.listdir(WORKSPACE_HOME)) == 0:
-    log.info("Copy tutorials to /workspace folder")
-    from distutils.dir_util import copy_tree
-    # Copy all files within tutorials folder in resources to workspace home
-    copy_tree(os.path.join(ENV_RESOURCES_PATH, "tutorials"), WORKSPACE_HOME)
-
-# restore config on startup - if CONFIG_BACKUP_ENABLED - it needs to run before other configuration 
-call("python " + ENV_RESOURCES_PATH + "/scripts/backup_restore_config.py restore", shell=True)
-
+# Configure ssh service (generates keys, writes ssh environment)
 log.info("Configure ssh service")
-call("sudo python " + ENV_RESOURCES_PATH + "/scripts/configure_ssh.py", shell=True)
+call("sudo python3 " + ENV_RESOURCES_PATH + "/scripts/configure_ssh.py", shell=True)
 
-log.info("Configure cron scripts")
-call("python " + ENV_RESOURCES_PATH + "/scripts/configure_cron_scripts.py", shell=True)
-
-log.info("Configure and run custom scripts")
-call("python " + ENV_RESOURCES_PATH + "/scripts/run_custom_scripts.py", shell=True)
-
-if ENV_OPENP2P_TOKEN:
-    log.info("Configure and run openp2p scripts")
-    call(ENV_RESOURCES_PATH + "/tools/openp2p.sh --token="+ENV_OPENP2P_TOKEN+"&", shell=True)
-
+# Run a user-provided startup script from the workspace folder if present
+WORKSPACE_HOME = os.getenv('WORKSPACE_HOME', "/workspace")
 startup_custom_script = os.path.join(WORKSPACE_HOME, "on_startup.sh")
 if os.path.exists(startup_custom_script):
     log.info("Run on_startup.sh user script from workspace folder")
-    # run startup script from workspace folder - can be used to run installation routines on workspace updates
     call("/bin/bash " + startup_custom_script, shell=True)
 
 # Run supervisor process - main container process

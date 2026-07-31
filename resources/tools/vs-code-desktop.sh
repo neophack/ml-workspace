@@ -14,14 +14,24 @@ done
 
 if [ ! -f "/usr/share/code/code" ]; then
     echo "Installing VS Code. Please wait..."
-    cd $RESOURCES_PATH
-    # Tmp fix to run vs code without no-sandbox: https://github.com/microsoft/vscode/issues/126027
-    wget -q https://az764295.vo.msecnd.net/stable/054a9295330880ed74ceaedda236253b4f39a335/code_1.56.2-1620838498_amd64.deb -O ./vscode.deb
-    # wget -q https://go.microsoft.com/fwlink/?LinkID=760868 -O ./vscode.deb
+    # Install via the official Microsoft apt repository (stable, dependencies
+    # resolved automatically, survives redirects better than a one-shot deb download).
     apt-get update
-    apt-get install -y ./vscode.deb
-    rm ./vscode.deb
-    rm /etc/apt/sources.list.d/vscode.list
+    apt-get install -y --no-install-recommends wget gpg
+    install -m 0755 -d /etc/apt/keyrings
+    wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /etc/apt/keyrings/packages.microsoft.gpg
+    chmod go+r /etc/apt/keyrings/packages.microsoft.gpg
+    echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" \
+        > /etc/apt/sources.list.d/vscode.list
+    apt-get update
+    # Retry the install a few times: the code deb is large (~230MB) and the
+    # connection can be flaky (proxies / emulated builds).
+    apt-get install -y --no-install-recommends \
+        -o Acquire::Retries=10 \
+        -o Acquire::https::Timeout=60 \
+        code
+    # Remove the apt source so it does not linger (keep the installed binary).
+    rm -f /etc/apt/sources.list.d/vscode.list
 else
     echo "VS Code is already installed"
 fi

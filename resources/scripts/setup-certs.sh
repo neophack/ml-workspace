@@ -21,5 +21,8 @@ cp ${SSL_RESOURCES_PATH}/$SSLNAME.crt /usr/local/share/ca-certificates/
 # update certificates, but dont print out information
 update-ca-certificates > /dev/null
 
-# Add following add certificates to certify python package
-cat ${SSL_RESOURCES_PATH}/$SSLNAME.crt >> ${CONDA_PYTHON_DIR}/site-packages/certifi/cacert.pem
+# Add following add certificates to certify python package (if certifi is installed)
+CERTIFI_PEM="$(python3 -c 'import certifi; print(certifi.where())' 2>/dev/null || true)"
+if [ -n "${CERTIFI_PEM}" ] && [ -f "${CERTIFI_PEM}" ]; then
+    cat ${SSL_RESOURCES_PATH}/$SSLNAME.crt >> "${CERTIFI_PEM}"
+fi

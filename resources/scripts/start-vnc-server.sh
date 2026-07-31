@@ -11,6 +11,14 @@
 
 set -eu
 
+# Render the noVNC browser title (container name + IP) into the served static
+# files. Runs on every container start since hostname/IP may change.
+RESOURCES_PATH="${RESOURCES_PATH:-/resources}"
+if [ -x "${RESOURCES_PATH}/scripts/configure-novnc-title.sh" ]; then
+    "${RESOURCES_PATH}/scripts/configure-novnc-title.sh" || \
+        echo "[start-vnc-server] WARNING: failed to configure noVNC title" >&2
+fi
+
 # Set default values for vnc settings if not provided
 VNC_PW=${VNC_PW:-"vncpassword"}
 VNC_RESOLUTION=${VNC_RESOLUTION:-"1600x900"}
