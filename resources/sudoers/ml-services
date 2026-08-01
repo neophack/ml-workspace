@@ -1,0 +1,34 @@
+# ============================================================================
+# Restricted sudoers whitelist for the ml workspace container.
+#
+# The container's non-root user (`ml`) must NOT have unrestricted passwordless
+# sudo. Instead, only the exact commands required to bootstrap container
+# services are allowed without a password. Every other sudo invocation
+# requires the user's password (set from VNC_PW at startup).
+#
+# This file is installed to /etc/sudoers.d/ml-services with mode 0440 and
+# validated with `visudo -cf` during the image build.
+# ============================================================================
+
+# Defaults: do not require a controlling tty for the whitelisted commands
+# (supervisord runs services without a tty). Preserve ML_GENERATED_PW so the
+# password helper knows whether to persist the generated secret for reuse.
+Defaults:ml !requiretty
+Defaults:ml env_keep+="ML_GENERATED_PW"
+
+# --- Service bootstrap (passwordless) ----------------------------------------
+# sshd is started by supervisord via the privileged wrapper start-sshd.sh,
+# which uses a FIXED config (no arbitrary args). Granting `sshd *` here would
+# let ml escalate to root (e.g. `sudo sshhd -f /tmp/evil`), so only the exact
+# wrapper path is whitelisted.
+ml ALL=(root) NOPASSWD: /resources/scripts/start-sshd.sh
+
+# Initial SSH configuration (key generation, authorized_keys) runs once at
+# startup as root.
+ml ALL=(root) NOPASSWD: /usr/bin/python3 /resources/scripts/configure_ssh.py
+
+# The entrypoint sets the ml user's login/sudo password from VNC_PW. The helper
+# script reads the credential from stdin (so it never appears in `ps`) and is
+# one-shot latched by /etc/.ml_ssh_pwd_revoked (root-owned). It internally calls
+# chpasswd, so we do NOT whitelist chpasswd directly.
+ml ALL=(root) NOPASSWD: /resources/scripts/set-ml-password-if-unlocked.sh

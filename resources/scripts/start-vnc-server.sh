@@ -29,8 +29,10 @@ touch $HOME/.vnc/passwd
 
 chmod 1777 /tmp 
 
-# Set password:
-echo "$VNC_PW" | vncpasswd -f >> $HOME/.vnc/passwd
+# Set password (overwrite, not append: appending would accumulate hashes across
+# restarts and TigerVNC only honors the first line, so a user who changes
+# VNC_PW would still authenticate with the old password).
+echo "$VNC_PW" | vncpasswd -f > $HOME/.vnc/passwd
 chmod 600 $HOME/.vnc/passwd
 
 config_file=$HOME/.vnc/config

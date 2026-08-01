@@ -1073,13 +1073,11 @@ const UI = {
 
         document.body.addEventListener("paste", function (e) {
             try {
-            console.log("paste");
             if (controlBarClipboard.classList.contains("noVNC_open")) {
                 return;
             }
             if (UI.rfb != null) {
                 text = e.clipboardData.getData("text");
-                console.log("copy clipboard from local to vnc: " + text);
                 controlBarClipboard.value = text;
                 UI.rfb.clipboardPasteFrom(text);
             }
@@ -1090,7 +1088,6 @@ const UI = {
 
         document.body.addEventListener("keydown", function (e) {
             try {
-            console.log("document keydown: " + e.keyCode);
             if (controlBar.classList.contains("noVNC_open")) {
                 return;
             }
@@ -1101,7 +1098,6 @@ const UI = {
                 navigator.clipboard
                     .readText()
                     .then((text) => {
-                    console.log("copy clipboard from local to vnc: " + text);
                     controlBarClipboard.value = text;
                     UI.rfb.clipboardPasteFrom(text);
                     })
@@ -1123,7 +1119,6 @@ const UI = {
 
         document.body.addEventListener("keyup", function (e) {
             try {
-            console.log("document keyup");
             if (controlBar.classList.contains("noVNC_open")) {
                 return;
             }
@@ -1144,7 +1139,6 @@ const UI = {
 
         viewer.addEventListener("keydown", function (e) {
             try {
-            console.log("viewer keydown");
             if (e.ctrlKey) {
                 if (controlBar.classList.contains("noVNC_open")) {
                 return;
@@ -1158,15 +1152,11 @@ const UI = {
 
         viewer.addEventListener("keyup", function (e) {
             try {
-            console.log("viewer keyup: " + e.keyCode);
             if (e.ctrlKey && [67, 88].includes(e.keyCode)) {
                 if (controlBar.classList.contains("noVNC_open")) {
                 return;
                 }
                 if (clipboard != null) {
-                console.log(
-                    "copy clipboard from vnc to local: " + clipboard.value
-                );
                 clipboard.focus();
                 clipboard.select();
 

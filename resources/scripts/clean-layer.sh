@@ -9,10 +9,8 @@
 # archives and source files used to produce binary to reduce the size
 # of the layer.
 
-# Disable exit on error
+# Disable exit on error (cleanup is best-effort)
 set +e
-# Show all commands
-set -x
 
 echo "Running layer cleanup script..."
 

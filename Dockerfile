@@ -22,7 +22,10 @@ ENV \
     SHELL="/bin/bash" \
     NB_USER="ml" \
     HOME="/home/ml" \
-    USER_GID=0 \
+    # Primary group id for the ml user. Use a dedicated non-root group (1000)
+    # instead of gid 0 (root group) so the non-root user does NOT inherit
+    # root-group write access to system directories.
+    USER_GID=1000 \
     XDG_CACHE_HOME="/home/ml/.cache/" \
     XDG_RUNTIME_DIR="/tmp/runtime-root" \
     DISPLAY=":1" \
@@ -38,20 +41,20 @@ ENV \
 
 WORKDIR $HOME
 
-# Make folders
+# Make folders with least-privilege permissions (owner + group writable).
 RUN \
-    mkdir $RESOURCES_PATH && chmod a+rwx $RESOURCES_PATH && \
-    mkdir $WORKSPACE_HOME && chmod a+rwx $WORKSPACE_HOME && \
-    mkdir $SSL_RESOURCES_PATH && chmod a+rwx $SSL_RESOURCES_PATH
+    mkdir $RESOURCES_PATH && chmod 0775 $RESOURCES_PATH && \
+    mkdir $WORKSPACE_HOME && chmod 0775 $WORKSPACE_HOME && \
+    mkdir $SSL_RESOURCES_PATH && chmod 0770 $SSL_RESOURCES_PATH
 
 # Layer cleanup script
 COPY resources/scripts/clean-layer.sh  /usr/bin/clean-layer.sh
 COPY resources/scripts/fix-permissions.sh  /usr/bin/fix-permissions.sh
 
-# Make clean-layer and fix-permissions executable
+# Make clean-layer and fix-permissions executable (build-time utilities)
 RUN \
-    chmod a+rwx /usr/bin/clean-layer.sh && \
-    chmod a+rwx /usr/bin/fix-permissions.sh
+    chmod 0755 /usr/bin/clean-layer.sh && \
+    chmod 0755 /usr/bin/fix-permissions.sh
 
 # Generate and Set locals
 RUN \
@@ -93,13 +96,18 @@ RUN \
     fix-permissions.sh $HOME && \
     clean-layer.sh
 
-# Create non-root user (passwordless sudo)
+# Create non-root user (member of sudo group; sudo requires a password by
+# default except for the restricted service-bootstrap whitelist in
+# /etc/sudoers.d/ml-services, installed later in the CONFIGURATION stage).
 RUN \
     set -e && \
     chmod g+rw /home && mkdir -p $HOME && \
-    useradd -d $HOME -s /bin/bash -G sudo $NB_USER && \
-    echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
-    chown -R $NB_USER.$NB_USER /home/$NB_USER
+    # Create a dedicated group (gid from USER_GID, non-root) and the ml user
+    # with that group as primary, plus the sudo group for (password-gated)
+    # privilege escalation.
+    groupadd -g $USER_GID $NB_USER && \
+    useradd -d $HOME -s /bin/bash -g $NB_USER -G sudo $NB_USER && \
+    chown -R $NB_USER:$NB_USER /home/$NB_USER
 
 # Add tini (init) + SSH
 RUN \
@@ -110,13 +118,18 @@ RUN \
         openssh-client \
         openssh-server && \
     chmod go-w /root && \
+    # /root/.ssh stays owned by root (never handed to the non-root user).
     mkdir -p /root/.ssh/ && \
     touch /root/.ssh/config && \
-    sudo chown -R $NB_USER:users /root/.ssh && \
     chmod 700 /root/.ssh && \
+    # Pre-create the ml user's ~/.ssh skeleton (configure_ssh.py fills it at
+    # runtime); StrictModes requires 0700 + owner ml.
+    mkdir -p $HOME/.ssh && \
+    chown -R $NB_USER:$NB_USER $HOME/.ssh && \
+    chmod 700 $HOME/.ssh && \
     mkdir -p /var/run/sshd && \
     fix-permissions.sh $HOME && \
-    chmod -R a+rwx $RESOURCES_PATH && \
+    chmod -R 0775 $RESOURCES_PATH && \
     clean-layer.sh
 
 ### END BASICS ###
@@ -133,7 +146,7 @@ RUN \
     ln -sf /usr/bin/python3 /usr/bin/python && \
     pip3 install --no-cache-dir supervisor supervisor-stdout && \
     mkdir -p /var/log/supervisor/ && \
-    mkdir -p /var/run/sshd && chmod 400 /var/run/sshd && \
+    mkdir -p /var/run/sshd && chmod 0755 /var/run/sshd && \
     clean-layer.sh
 
 ENV PATH=$HOME/.local/bin:$PATH
@@ -219,22 +232,38 @@ COPY resources/supervisor/supervisord.conf /etc/supervisor/supervisord.conf
 # Copy all supervisor program definitions into workspace
 COPY resources/supervisor/programs/ /etc/supervisor/conf.d/
 
+# Restricted sudoers whitelist: only service-bootstrap commands may run
+# passwordless; everything else requires the ml user's password.
+COPY resources/sudoers/ml-services /etc/sudoers.d/ml-services
+RUN \
+    chmod 0440 /etc/sudoers.d/ml-services && \
+    visudo -cf /etc/sudoers.d/ml-services && \
+    visudo -cf /etc/sudoers && \
+    # ensure the password-provisioning helper and the sshd wrapper are
+    # executable (both invoked via sudo at runtime)
+    chmod 0755 $RESOURCES_PATH/scripts/set-ml-password-if-unlocked.sh \
+                $RESOURCES_PATH/scripts/start-sshd.sh
+
 # Assume yes to all apt commands, to avoid user confusion around stdin.
 COPY resources/config/90assumeyes /etc/apt/apt.conf.d/
+
+# Default VNC / login / sudo password (override at runtime with -e VNC_PW=...).
+# Applied on first container boot by the one-shot latch script
+# set-ml-password-if-unlocked.sh; later restarts keep the existing password.
+ENV VNC_PW="vncpassword"
 
 # Branding and final fixups
 RUN \
     ## create index.html to forward automatically to `vnc.html`
     ln -s $RESOURCES_PATH/novnc/vnc.html $RESOURCES_PATH/novnc/index.html && \
-    # Configure git
+    # Configure git (TLS verification is kept ON for supply-chain safety)
     git config --global core.fileMode false && \
-    git config --global http.sslVerify false && \
     git config --global credential.helper 'cache --timeout=31540000' || true && \
     # Various configurations
-    chmod -R a+rwx $WORKSPACE_HOME && \
-    chmod -R a+rwx $RESOURCES_PATH && \
+    chmod -R 0775 $WORKSPACE_HOME && \
+    chmod -R 0775 $RESOURCES_PATH && \
     # make all desktop launchers executable
-    chmod -R a+rwx /usr/share/applications/ && \
+    chmod -R 0755 /usr/share/applications/ && \
     # ensure Desktop folder exists (home skeleton may not ship one)
     mkdir -p $HOME/Desktop && \
     ln -s $RESOURCES_PATH/tools/ $HOME/Desktop/Tools && \
@@ -243,18 +272,28 @@ RUN \
     chmod a+x $HOME/Desktop/*.desktop 2>/dev/null || true && \
     chown $NB_USER:$NB_USER /tmp && \
     chmod 1777 /tmp && \
-    chmod a+rwx /tmp && \
     # Set /workspace as default directory to navigate to.
     # ~/.bashrc is shipped from resources/home/ and already cd's to
     # /workspace, so this only acts as a fallback if that file is replaced.
     grep -q "cd $WORKSPACE_HOME" $HOME/.bashrc 2>/dev/null || \
         echo 'cd '$WORKSPACE_HOME >> $HOME/.bashrc && \
-    chown root:root /usr/bin/sudo && chmod 4755 /usr/bin/sudo
+    chown root:root /usr/bin/sudo && chmod 4755 /usr/bin/sudo && \
+    # NOTE: the ml user's login/sudo password is NOT set at build time. It is
+    # provisioned on first container boot by docker-entrypoint.py via the
+    # one-shot latch script set-ml-password-if-unlocked.sh (creates
+    # /etc/.ml_ssh_pwd_revoked), so the password from VNC_PW is applied exactly
+    # once and never clobbers a password the user later changes with `passwd`.
+    # Final permission fixups for runtime directories used by supervisord
+    # and sshd (least-privilege: writable by owner + group only).
+    chown -R $NB_USER:$NB_USER $HOME && \
+    chmod -R 0775 $HOME && \
+    mkdir -p /var/log/supervisor && chmod -R 0775 /var/log/supervisor && \
+    chmod -R 0775 /var/run && \
+    chmod 0700 /var/run/sshd && \
+    chmod -R 0775 /var/log
 
 # Environment variables for VNC and workspace
 ENV \
-    # Basic VNC Settings - no password
-    VNC_PW=vncpassword \
     VNC_RESOLUTION=1600x900 \
     VNC_COL_DEPTH=24 \
     # Set default values for environment variables
@@ -267,14 +306,6 @@ ENV \
 ### END CONFIGURATION ###
 
 USER $NB_USER
-
-RUN \
-    sudo chmod 777 $HOME/ -R && \
-    sudo chown ml:ml $HOME/ -R && \
-    sudo chmod 777 /var/log/supervisor/ -R && \
-    sudo chmod 777 /var/run -R && \
-    sudo chmod 400 /var/run/sshd && \
-    sudo chmod 777 /var/log -R
 
 # use global option with tini to kill full process groups: https://github.com/krallin/tini#process-group-killing
 ENTRYPOINT ["/tini", "-g", "--"]

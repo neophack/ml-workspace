@@ -30,13 +30,14 @@ for d in $@; do
       -group $USER_GID \
       -a -perm -g+rwX  \
     \) \
-    -exec chgrp $USER_GID {} \; \
+    -exec chgrp -f $USER_GID {} \; \
     -exec chmod g+rwX {} \;
-  # setuid,setgid *on directories only*
+  # setgid *on directories only* (so new files inherit the group). The setuid
+  # bit on directories has no effect and only confuses security audits.
   find "$d" \
     \( \
         -type d \
-        -a ! -perm -6000  \
+        -a ! -perm -2000  \
     \) \
-    -exec chmod +6000 {} \;
+    -exec chmod +2000 {} \;
 done

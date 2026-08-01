@@ -1,30 +1,23 @@
-# Inspiration:
-# https://ubuntuforums.org/showthread.php?t=831372
+# sshd configuration for the ml workspace container.
+# Hardened for production: key-based auth preferred, password login still
+# enabled (using the VNC_PW-derived ml user password) for ease of access.
 
-# Logging Configuration
+# --- Logging -----------------------------------------------------------------
 SyslogFacility AUTH
 LogLevel INFO
 
-# Root is the only user allowed to login
+# --- Access control ----------------------------------------------------------
+# Only the `ml` user may log in; root login is rejected outright.
 AllowUsers ml
+PermitRootLogin no
+PermitEmptyPasswords no
+MaxAuthTries 3
+LoginGraceTime 30
 
-# Allow TCP Forwarding: required by vs code remote development: 
-# https://code.visualstudio.com/docs/remote/troubleshooting#_enabling-alternate-ssh-authentication-methods
-AllowTcpForwarding yes
-
-# Allow transfer of user environment variables
-PermitUserEnvironment yes
-
-# Alive Interval will make SSH connection more stable 
-ClientAliveInterval 60
-ClientAliveCountMax 10
-
-# Allow Remote Port forwarding to an address other than localhost
-# https://askubuntu.com/questions/50064/reverse-port-tunnelling
-GatewayPorts clientspecified
-
-# Only allow key-based authentication -> higher security
+# --- Authentication ----------------------------------------------------------
+# Both password and public-key auth are accepted. Public key is preferred.
 PasswordAuthentication yes
+PubkeyAuthentication yes
 ChallengeResponseAuthentication no
 GSSAPIAuthentication no
 IgnoreRhosts yes
@@ -32,16 +25,36 @@ HostbasedAuthentication no
 IgnoreUserKnownHosts yes
 UsePAM no
 
-# Activate SFTP server
-Subsystem sftp internal-sftp
+# Do NOT let the client side pick up a per-user environment file: even a
+# whitelist can leak secrets injected via the container environment, and it is
+# a known privilege-boundary risk surface. Shells inherit locale from PAM/the
+# system instead.
+PermitUserEnvironment no
+
+# --- Connection stability ----------------------------------------------------
+# Alive intervals make SSH connections more stable behind NAT/proxies.
+ClientAliveInterval 60
+ClientAliveCountMax 10
+
+# Disallow client-specified bind addresses for remote port forwarding: prevents
+# the container from being turned into an internal-network relay/jump host.
+GatewayPorts no
+
+# Allow TCP Forwarding: required by vs code remote development:
+# https://code.visualstudio.com/docs/remote/troubleshooting#_enabling-alternate-ssh-authentication-methods
+AllowTcpForwarding yes
 
 # Allow SSH-Agent Forwarding
 AllowAgentForwarding yes
 
-# Activate X11 Forwarding (GUI Access)  
+# --- X11 Forwarding (GUI Access) --------------------------------------------
 X11Forwarding yes
 X11UseLocalhost no
 X11DisplayOffset 10
 
-# Disable permissions checks on keyfiles and directories
-StrictModes no
+# --- SFTP --------------------------------------------------------------------
+Subsystem sftp internal-sftp
+
+# --- Hardening ---------------------------------------------------------------
+# Enforce correct ownership/permissions on keyfiles and their directories.
+StrictModes yes

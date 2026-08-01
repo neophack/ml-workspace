@@ -96,3 +96,6 @@ hs_err_pid*
 temp/*
 .DS_Store
 .zcode/
+# Large binary artifacts
+*.tar
+matlab-vnc.tar

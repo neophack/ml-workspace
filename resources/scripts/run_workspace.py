@@ -8,17 +8,21 @@ Only configures SSH and then starts supervisord, which manages:
   - novnc (websockify web client)
   - sshd
   - oneport (single-port multiplexing of noVNC HTTP + SSH)
+
+Security note: subprocess is invoked with argument lists (never shell=True) to
+avoid command injection from environment-controlled values.
 """
 
-from subprocess import call
+import logging
 import os
 import sys
+from subprocess import run
 
-import logging
 logging.basicConfig(
-    format='%(asctime)s [%(levelname)s] %(message)s',
+    format="%(asctime)s [%(levelname)s] %(message)s",
     level=logging.INFO,
-    stream=sys.stdout)
+    stream=sys.stdout,
+)
 
 log = logging.getLogger(__name__)
 
@@ -26,16 +30,25 @@ log.info("Start Workspace")
 
 ENV_RESOURCES_PATH = os.getenv("RESOURCES_PATH", "/resources")
 
-# Configure ssh service (generates keys, writes ssh environment)
+# Configure ssh service (generates keys, writes ssh environment).
+# Runs as root via the restricted sudoers whitelist; configure_ssh.py itself
+# only ever needs to run once at startup.
 log.info("Configure ssh service")
-call("sudo python3 " + ENV_RESOURCES_PATH + "/scripts/configure_ssh.py", shell=True)
+run(
+    ["sudo", "-n", "/usr/bin/python3",
+     f"{ENV_RESOURCES_PATH}/scripts/configure_ssh.py"],
+    check=False,
+)
 
-# Run a user-provided startup script from the workspace folder if present
-WORKSPACE_HOME = os.getenv('WORKSPACE_HOME', "/workspace")
-startup_custom_script = os.path.join(WORKSPACE_HOME, "on_startup.sh")
-if os.path.exists(startup_custom_script):
-    log.info("Run on_startup.sh user script from workspace folder")
-    call("/bin/bash " + startup_custom_script, shell=True)
+# NOTE: we intentionally do NOT execute any script from /workspace. The workspace
+# is a shared, user-writable data volume; auto-running scripts from it is a
+# persistent-backdoor risk surface (anything that can write the volume could
+# plant a script that runs on every boot). Users who need startup customization
+# should extend the image and place scripts under /resources/scripts instead.
 
-# Run supervisor process - main container process
-call('supervisord -n -c /etc/supervisor/supervisord.conf', shell=True)
+# Run supervisor process - main container process.
+sys.exit(
+    run(
+        ["supervisord", "-n", "-c", "/etc/supervisor/supervisord.conf"]
+    ).returncode
+)

@@ -1,4 +1,8 @@
+# Assume "yes" to apt prompts during interactive use, to avoid the container
+# hanging on a confirmation prompt. Downgrades are permitted.
+#
+# SECURITY: allow-remove-essential and allow-change-help-packages are NOT
+# enabled — permitting silent removal of essential packages (libc, etc.) could
+# brick the container or uninstall security tooling.
 APT::Get::Assume-Yes "true";
 APT::Get::allow-downgrades "true";
-APT::Get::allow-remove-essential "true";
-APT::Get::allow-change-help-packages "true";
