@@ -322,7 +322,7 @@ RUN \
 # GPU runtime helpers + ONNX
 RUN \
     pip install --no-cache-dir \
-        onnxruntime-gpu==1.20.1 \
+        onnxruntime-gpu==1.20.2 \
         onnx \
         gpustat==1.1.1 \
         nvidia-ml-py3 && \
