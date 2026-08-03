@@ -124,7 +124,6 @@ RUN \
         iproute2 \
         psmisc \
         tmux \
-        dpkg-sig \
         uuid-dev \
         xclip \
         clinfo \
@@ -271,7 +270,7 @@ RUN \
         thunar-archive-plugin \
         xarchiver \
         gvfs-backends \
-        gigolo gvfs-bin && \
+        gigolo && \
     apt-get purge -y pm-utils xscreensaver* && \
     apt-get remove -y app-install-data gnome-user-guide 2>/dev/null || true && \
     clean-layer.sh
