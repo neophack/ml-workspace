@@ -234,21 +234,18 @@ RUN \
 ### END BASICS ###
 
 
-# Supervisor for process management (installed via pipx so we get a current version on py3.12)
+# Supervisor for process management. Plain pip (not pipx) because supervisor-stdout
+# (an old sdist) fails to build inside pipx's isolated venv (no setuptools there).
 RUN \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-        python3.12-venv \
         rsyslog && \
-    pip install --no-cache-dir pipx && \
-    python -m pipx ensurepath && \
-    pipx install supervisor && \
-    pipx inject supervisor supervisor-stdout && \
+    pip install --no-cache-dir supervisor supervisor-stdout && \
     mkdir -p /var/run/sshd && chmod 400 /var/run/sshd && \
     mkdir -p /var/log/supervisor/ && \
     clean-layer.sh
 
-ENV PATH=$HOME/.local/bin:/root/.local/bin:$PATH
+ENV PATH=$HOME/.local/bin:$PATH
 
 
 ### GUI TOOLS ###
