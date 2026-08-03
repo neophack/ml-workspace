@@ -271,7 +271,7 @@ RUN \
         xarchiver \
         gvfs-backends \
         gigolo && \
-    apt-get purge -y pm-utils xscreensaver* && \
+    apt-get purge -y pm-utils xscreensaver* 2>/dev/null || true && \
     apt-get remove -y app-install-data gnome-user-guide 2>/dev/null || true && \
     clean-layer.sh
 
@@ -319,14 +319,14 @@ RUN \
 
 ### PYTHON PACKAGES ###
 
-# GPU runtime helpers + ONNX
+# GPU runtime helpers + ONNX. gpustat needs nvidia-ml-py (already in the NGC base as
+# 12.570.86); do NOT install nvidia-ml-py3 (an old fork that conflicts with it).
 RUN \
     pip install --no-cache-dir setuptools_scm wheel && \
     pip install --no-cache-dir --no-build-isolation \
         onnxruntime-gpu==1.20.2 \
         onnx \
-        gpustat==1.1.1 \
-        nvidia-ml-py3 && \
+        gpustat==1.1.1 && \
     clean-layer.sh
 
 # Core ML + utility requirements (Python 3.12 compatible). No Jupyter, no zsh tooling.
