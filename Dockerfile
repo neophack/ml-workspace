@@ -375,6 +375,7 @@ RUN \
     chmod -R a+rwx $WORKSPACE_HOME && \
     chmod -R a+rwx $RESOURCES_PATH && \
     chmod -R a+rwx /usr/share/applications/ && \
+    mkdir -p $HOME/Desktop && \
     ln -s $WORKSPACE_HOME $HOME/Desktop/workspace && \
     chown $NB_USER:$NB_USER /tmp && \
     chmod 1777 /tmp && \
