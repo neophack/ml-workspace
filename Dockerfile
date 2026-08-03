@@ -330,12 +330,12 @@ RUN \
     clean-layer.sh
 
 # Core ML + utility requirements (Python 3.12 compatible). No Jupyter, no zsh tooling.
-# Installed WITHOUT --upgrade and with ngc-constraints.txt so the NGC torch/numpy stack
-# is preserved (numpy pinned <2 to match the NGC torch build's ABI).
+# Installed WITHOUT version pins for packages already in the NGC base, and WITHOUT
+# --upgrade, so the NGC torch/numpy/nvidia-* stack is left untouched (pip only installs
+# what's genuinely missing). This avoids ResolutionImpossible conflicts.
 COPY resources/libraries ${RESOURCES_PATH}/libraries
 RUN \
-    pip install --no-cache-dir -c ${RESOURCES_PATH}/libraries/ngc-constraints.txt \
-        -r ${RESOURCES_PATH}/libraries/requirements-minimal.txt && \
+    pip install --no-cache-dir -r ${RESOURCES_PATH}/libraries/requirements-minimal.txt && \
     clean-layer.sh
 
 ### END PYTHON PACKAGES ###

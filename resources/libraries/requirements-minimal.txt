@@ -4,49 +4,46 @@
 # IMPORTANT: do NOT pin/upgrade torch, torchvision, numpy, or any package already
 # provided by the NGC image. Upgrading them via pip would replace the NGC-optimized
 # build (torch 2.7.0a0+nv25.3, built for sm_70–sm_120) with stock PyPI wheels that
-# dropped sm_70, breaking V100 support. Only packages MISSING from the NGC image are
-# listed below, with no --upgrade, so the NGC stack is left untouched.
+# dropped sm_70, breaking V100 support.
 #
-# Already provided by NGC 25.03-py3 (DO NOT re-pin): torch, torchvision, numpy 1.26.4,
-# pandas 2.2.3, scipy 1.15.2, matplotlib 3.10.1, pillow 11.1.0, PyYAML 6.0.2,
-# tqdm 4.67.1, requests 2.32.3, Cython 3.0.12, attrs 25.1.0, joblib 1.4.2,
-# packaging 23.2, typing_extensions 4.12.2, six 1.16.0, click 8.1.8, cffi 1.17.1,
-# pyzmq 26.2.1, tornado 6.4.2, Jinja2 3.1.6, MarkupSafe 3.0.2, protobuf 4.24.4,
-# regex 2024.11.6, nvidia-ml-py 12.570.86.
+# Most utility packages are already installed in the NGC base (numpy, pandas, scipy,
+# matplotlib, pillow, requests, tqdm, etc). We install WITHOUT version pins and
+# WITHOUT --upgrade, so pip leaves already-satisfied packages untouched and only
+# installs what's genuinely missing. This avoids ResolutionImpossible conflicts
+# between our pins and the NGC-installed versions.
 
-## Utilities (not in NGC base)
-httpie==3.2.4
-cloudpickle==3.1.0
-msgpack==1.1.0
-h5py==3.12.1
-seaborn==0.13.2
-sqlalchemy==2.0.36
-pygments==2.18.0
-jsonschema==4.23.0
-loguru==0.7.2
-tabulate==0.9.0
-imageio==2.36.0
-colorama==0.4.6
-dill==0.3.9
-simplejson==3.19.3
-python-dateutil==2.9.0
+## Utilities (unpinned — use NGC version if present, else install latest compatible)
+httpie
+cloudpickle
+msgpack
+h5py
+seaborn
+sqlalchemy
+pygments
+jsonschema
+loguru
+tabulate
+imageio
+dill
+simplejson
+python-dateutil
 
 ## Development helper (slimmed: only the most common formatters/linters)
-black==24.10.0
-flake8==7.1.1
-isort==5.13.2
-autopep8==2.3.1
-pytest==8.3.4
-virtualenv==20.28.0
+black
+flake8
+isort
+autopep8
+pytest
+virtualenv
 
 ## Web frameworks
-flask==3.0.3
-gunicorn==23.0.0
-uvicorn==0.32.1
-fastapi==0.115.5
-pydantic==2.10.3
+flask
+gunicorn
+uvicorn
+fastapi
+pydantic
 
-## ML (transformers stack — compatible with torch 2.7, does NOT pull a new torch)
+## ML (transformers stack — pinned to a torch-2.7-compatible release)
 transformers==4.46.3
 tokenizers==0.20.3
 accelerate==1.1.1
@@ -56,21 +53,21 @@ safetensors==0.4.5
 einops==0.8.0
 tensorboard==2.18.0
 scikit-learn==1.5.2
-addict==2.4.0
-editdistance==0.8.1
-jsonlines==4.0.0
-markdown2==2.5.1
-more_itertools==10.5.0
-openpyxl==3.1.5
-sacrebleu==2.4.3
-shortuuid==1.0.13
+addict
+editdistance
+jsonlines
+markdown2
+more_itertools
+openpyxl
+sacrebleu
+shortuuid
 
 ## Images
 opencv-python-headless==4.10.0.84
 opencv-python==4.10.0.84
 scikit-image==0.24.0
 albumentations==1.4.14
-thop==0.1.1.post2209072238
+thop
 
 ## Monitoring
-psutil==6.1.0
+psutil
