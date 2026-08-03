@@ -189,6 +189,7 @@ RUN \
         fonts-wqy-zenhei \
         gdb \
         gosu \
+        nvtop \
         zlib1g-dev && \
     # Newer git from the official PPA
     add-apt-repository -y ppa:git-core/ppa && \
@@ -326,7 +327,6 @@ RUN \
         onnx \
         gpustat==1.1.1 \
         nvidia-ml-py3 && \
-    apt-get install -y --no-install-recommends nvtop && \
     clean-layer.sh
 
 # Core ML + utility requirements (Python 3.12 compatible). No Jupyter, no zsh tooling.
