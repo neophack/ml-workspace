@@ -300,7 +300,9 @@ RUN \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         fcitx \
+        fcitx-bin \
         gdebi \
+        im-config \
         libgsettings-qt-dev \
         libqt5qml5 \
         libqt5quick5 \
