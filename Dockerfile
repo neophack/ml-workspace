@@ -64,10 +64,12 @@ ENV \
 
 WORKDIR $HOME
 
-# The NGC image sets PIP_CONSTRAINT=/constraint.txt to pin preinstalled package versions
-# (numpy/torch/etc). We want our own requirements below to take effect, so we opt out of the
-# constraint for our installs.
-ENV PIP_CONSTRAINT=""
+# The NGC pytorch image ships torch 2.7.0a0+nv25.3 (built for sm_70–sm_120) and numpy 1.26.4.
+# Our pip installs must NOT upgrade torch/torchvision/numpy/nvidia-* — that would replace the
+# NGC-optimized build with stock PyPI wheels (which dropped sm_70, breaking V100). The
+# requirements file is additive only (no numpy/torch pins) and we install without --upgrade.
+ENV PIP_NO_BUILD_ISOLATION=0 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Make folders
 RUN \
@@ -330,9 +332,12 @@ RUN \
     clean-layer.sh
 
 # Core ML + utility requirements (Python 3.12 compatible). No Jupyter, no zsh tooling.
+# Installed WITHOUT --upgrade and with ngc-constraints.txt so the NGC torch/numpy stack
+# is preserved (numpy pinned <2 to match the NGC torch build's ABI).
 COPY resources/libraries ${RESOURCES_PATH}/libraries
 RUN \
-    pip install --no-cache-dir --upgrade --upgrade-strategy only-if-needed -r ${RESOURCES_PATH}/libraries/requirements-minimal.txt && \
+    pip install --no-cache-dir -c ${RESOURCES_PATH}/libraries/ngc-constraints.txt \
+        -r ${RESOURCES_PATH}/libraries/requirements-minimal.txt && \
     clean-layer.sh
 
 ### END PYTHON PACKAGES ###

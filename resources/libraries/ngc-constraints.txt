@@ -1,0 +1,11 @@
+# Constraints to preserve the NGC-provided stack when installing our requirements.
+# These packages are provided by nvcr.io/nvidia/pytorch:25.03-py3 and must NOT be
+# replaced by pip, or V100 (sm_70) support is lost (stock PyPI torch dropped sm_70).
+#
+# numpy: NGC ships 1.26.4 (torch was compiled against it). Pin to <2 to avoid the
+#        numpy 2.x ABI break that would break the NGC torch build.
+numpy<2
+# torch / torchvision / torchaudio: NGC custom build (2.7.0a0+nv25.3). Do not touch.
+# Pinning the exact local version is fragile, so we just forbid any upgrade by
+# leaving them unconstrained here and relying on pip's default (already-satisfied)
+# behaviour — combined with NOT passing --upgrade, pip will leave them as-is.
