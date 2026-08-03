@@ -330,11 +330,14 @@ RUN \
     clean-layer.sh
 
 # Core ML + utility requirements (Python 3.12 compatible). No Jupyter, no zsh tooling.
-# Installed WITHOUT version pins for packages already in the NGC base, and WITHOUT
-# --upgrade, so the NGC torch/numpy/nvidia-* stack is left untouched (pip only installs
-# what's genuinely missing). This avoids ResolutionImpossible conflicts.
+# The NGC image installs some packages via debian (e.g. blinker 1.7.0) without a pip
+# RECORD file. When a dependency (flask needs blinker>=1.9) tries to upgrade such a
+# package, pip fails with 'Cannot uninstall ... no RECORD file'. Pre-installing the
+# affected packages with --force-reinstall (which ignores the missing RECORD) creates
+# proper dist-info/RECORD files, so the subsequent requirements install can upgrade them.
 COPY resources/libraries ${RESOURCES_PATH}/libraries
 RUN \
+    pip install --no-cache-dir --force-reinstall blinker && \
     pip install --no-cache-dir -r ${RESOURCES_PATH}/libraries/requirements-minimal.txt && \
     clean-layer.sh
 
