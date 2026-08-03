@@ -11,10 +11,8 @@
 # ============================================================================
 
 # Defaults: do not require a controlling tty for the whitelisted commands
-# (supervisord runs services without a tty). Preserve ML_GENERATED_PW so the
-# password helper knows whether to persist the generated secret for reuse.
+# (supervisord runs services without a tty).
 Defaults:ml !requiretty
-Defaults:ml env_keep+="ML_GENERATED_PW"
 
 # --- Service bootstrap (passwordless) ----------------------------------------
 # sshd is started by supervisord via the privileged wrapper start-sshd.sh,

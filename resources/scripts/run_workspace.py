@@ -46,6 +46,12 @@ run(
 # plant a script that runs on every boot). Users who need startup customization
 # should extend the image and place scripts under /resources/scripts instead.
 
+# Ensure the supervisord socket/pidfile directory exists and is writable by ml.
+# It lives in /tmp (an image directory, NOT the root-owned /run tmpfs), but a
+# user could mount a fresh /tmp volume, so recreate it defensively at startup.
+SUPERVISOR_RUN_DIR = "/tmp/supervisor"
+os.makedirs(SUPERVISOR_RUN_DIR, mode=0o700, exist_ok=True)
+
 # Run supervisor process - main container process.
 sys.exit(
     run(

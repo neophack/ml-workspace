@@ -107,7 +107,12 @@ RUN \
     # privilege escalation.
     groupadd -g $USER_GID $NB_USER && \
     useradd -d $HOME -s /bin/bash -g $NB_USER -G sudo $NB_USER && \
-    chown -R $NB_USER:$NB_USER /home/$NB_USER
+    chown -R $NB_USER:$NB_USER /home/$NB_USER && \
+    # Hand /workspace to the ml user so it is fully owned (not just group-
+    # writable) by ml at build time. /workspace was created earlier (root:root)
+    # before the ml user existed; fix that now.
+    chown -R $NB_USER:$NB_USER $WORKSPACE_HOME && \
+    chmod 0775 $WORKSPACE_HOME
 
 # Add tini (init) + SSH
 RUN \
@@ -242,14 +247,19 @@ RUN \
     # ensure the password-provisioning helper and the sshd wrapper are
     # executable (both invoked via sudo at runtime)
     chmod 0755 $RESOURCES_PATH/scripts/set-ml-password-if-unlocked.sh \
-                $RESOURCES_PATH/scripts/start-sshd.sh
+                $RESOURCES_PATH/scripts/start-sshd.sh \
+                $RESOURCES_PATH/scripts/ml-logout.sh
 
 # Assume yes to all apt commands, to avoid user confusion around stdin.
 COPY resources/config/90assumeyes /etc/apt/apt.conf.d/
 
 # Default VNC / login / sudo password (override at runtime with -e VNC_PW=...).
-# Applied on first container boot by the one-shot latch script
-# set-ml-password-if-unlocked.sh; later restarts keep the existing password.
+# VNC_PW is used verbatim (no random generation): it sets the VNC desktop
+# password (start-vnc-server.sh writes it on every boot) and, on first boot
+# only, the ml user's login/sudo password via the one-shot latch script
+# set-ml-password-if-unlocked.sh (which creates /etc/.ml_ssh_pwd_revoked).
+# Later restarts keep the existing system password, so a user who runs
+# `passwd` is never clobbered.
 ENV VNC_PW="vncpassword"
 
 # Branding and final fixups
@@ -264,9 +274,15 @@ RUN \
     chmod -R 0775 $RESOURCES_PATH && \
     # make all desktop launchers executable
     chmod -R 0755 /usr/share/applications/ && \
+    # 接管 XFCE 面板菜单「Log Out」项：把它从 xfce4-session-logout 改指向 ml-logout.sh，
+    # 点击即停止整个容器（参考 torch-2.1 的 sed 思路，但执行体换成精确 kill 主链路的脚本，
+    # 而非无差别的 killall python，避免误伤用户在容器内手动起的 python 进程）。
+    # 机制：ml-logout.sh 先尝试 supervisorctl shutdown（优雅 exit 0），失败则 pkill
+    # run_workspace.py —— 任一路径都会让 tini 失去子进程 → 容器停止。
+    sed -i 's#xfce4-session-logout#'"$RESOURCES_PATH"'/scripts/ml-logout.sh#g' \
+        /usr/share/applications/xfce4-session-logout.desktop && \
     # ensure Desktop folder exists (home skeleton may not ship one)
     mkdir -p $HOME/Desktop && \
-    ln -s $RESOURCES_PATH/tools/ $HOME/Desktop/Tools && \
     ln -s $WORKSPACE_HOME $HOME/Desktop/workspace && \
     # mark desktop shortcuts as trusted (executable) launchers
     chmod a+x $HOME/Desktop/*.desktop 2>/dev/null || true && \
@@ -283,12 +299,26 @@ RUN \
     # one-shot latch script set-ml-password-if-unlocked.sh (creates
     # /etc/.ml_ssh_pwd_revoked), so the password from VNC_PW is applied exactly
     # once and never clobbers a password the user later changes with `passwd`.
+    # The VNC desktop password, by contrast, is rewritten from VNC_PW on every
+    # boot by start-vnc-server.sh.
     # Final permission fixups for runtime directories used by supervisord
     # and sshd (least-privilege: writable by owner + group only).
     chown -R $NB_USER:$NB_USER $HOME && \
     chmod -R 0775 $HOME && \
-    mkdir -p /var/log/supervisor && chmod -R 0775 /var/log/supervisor && \
-    chmod -R 0775 /var/run && \
+    # supervisord runs as the ml user (user=ml in supervisord.conf). It writes:
+    #   - logfile + child program logs -> /var/log/supervisor  (image fs)
+    #   - unix socket + pidfile       -> /tmp/supervisor        (image fs)
+    # Both must be owned by ml. We deliberately do NOT use /var/run for the
+    # socket/pidfile: /var/run is a symlink to /run, which Docker mounts as a
+    # root-owned tmpfs at runtime (overriding any build-time ownership), so ml
+    # could not create the socket there (EACCES). /tmp/supervisor is a normal
+    # image directory, owned by ml, so the socket is writable.
+    mkdir -p /var/log/supervisor && \
+    chown -R $NB_USER:$NB_USER /var/log/supervisor && \
+    chmod -R 0775 /var/log/supervisor && \
+    mkdir -p /tmp/supervisor && \
+    chown -R $NB_USER:$NB_USER /tmp/supervisor && \
+    chmod 0700 /tmp/supervisor && \
     chmod 0700 /var/run/sshd && \
     chmod -R 0775 /var/log
 
