@@ -291,6 +291,31 @@ RUN \
 ### END GUI TOOLS ###
 
 
+### INPUT METHOD (Baidu Pinyin via fcitx) ###
+
+COPY resources/fcitx-baidupinyin_1.0.1.0_amd64.deb $RESOURCES_PATH/
+
+# fcitx 4 + Baidu Pinyin. Qt5 runtime libs satisfy the deb's dependencies.
+# Note: qt5-default was dropped from Ubuntu (>=21.04) and is not needed (no qmake step here).
+RUN \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        fcitx \
+        gdebi \
+        libgsettings-qt-dev \
+        libqt5qml5 \
+        libqt5quick5 \
+        libqt5quickwidgets5 \
+        qml-module-qtquick2 \
+        libxss-dev \
+        eog && \
+    gdebi -n $RESOURCES_PATH/fcitx-baidupinyin_1.0.1.0_amd64.deb && \
+    im-config -n fcitx && \
+    clean-layer.sh
+
+### END INPUT METHOD ###
+
+
 ### PYTHON PACKAGES ###
 
 # GPU runtime helpers + ONNX
