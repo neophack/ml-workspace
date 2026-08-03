@@ -26,8 +26,8 @@ flake8
 autopep8
 virtualenv
 
-## Web frameworks (missing from NGC base)
-flask
+## Web frameworks (missing from NGC base). flask omitted: needs blinker>=1.9 but NGC's
+## debian-installed blinker 1.7.0 has no pip RECORD and can't be upgraded.
 gunicorn
 uvicorn
 fastapi

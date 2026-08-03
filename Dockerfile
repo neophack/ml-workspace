@@ -330,14 +330,12 @@ RUN \
     clean-layer.sh
 
 # Core ML + utility requirements (Python 3.12 compatible). No Jupyter, no zsh tooling.
-# The NGC image installs some packages via debian (e.g. blinker 1.7.0) without a pip
-# RECORD file. When a dependency (flask needs blinker>=1.9) tries to upgrade such a
-# package, pip fails with 'Cannot uninstall ... no RECORD file'. Pre-installing the
-# affected packages with --force-reinstall (which ignores the missing RECORD) creates
-# proper dist-info/RECORD files, so the subsequent requirements install can upgrade them.
+# Installed without version pins (use NGC versions where present) and without --upgrade,
+# so the NGC torch/numpy stack is preserved. NOTE: flask is intentionally omitted — it
+# requires blinker>=1.9 but the NGC image's debian-installed blinker 1.7.0 has no pip
+# RECORD file and cannot be upgraded/uninstalled. fastapi+uvicorn cover web serving.
 COPY resources/libraries ${RESOURCES_PATH}/libraries
 RUN \
-    pip install --no-cache-dir --force-reinstall blinker && \
     pip install --no-cache-dir -r ${RESOURCES_PATH}/libraries/requirements-minimal.txt && \
     clean-layer.sh
 
