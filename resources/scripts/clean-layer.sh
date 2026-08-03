@@ -26,8 +26,10 @@ rm -rf /usr/local/src/*
 rm -rf /tmp/* /var/tmp/* $HOME/.cache/* /var/cache/apt/*
 # Fix permissions on tmp directory
 chmod 1777 /tmp
-# Remove apt lists
-rm -rf /var/lib/apt/lists/* /etc/apt/sources.list.d/*
+# Remove apt lists (fetched package indexes) to save space.
+# NOTE: do NOT delete /etc/apt/sources.list.d/* — that removes configured apt
+# repositories (NVIDIA, PPAs, etc.) and breaks `apt-get update` in later layers.
+rm -rf /var/lib/apt/lists/*
 
 # Clean conda
 if [ -x "$(command -v conda)" ]; then
