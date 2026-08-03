@@ -322,6 +322,7 @@ RUN \
 # GPU runtime helpers + ONNX
 RUN \
     pip install --no-cache-dir \
+        setuptools_scm wheel \
         onnxruntime-gpu==1.20.2 \
         onnx \
         gpustat==1.1.1 \
