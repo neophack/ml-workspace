@@ -191,6 +191,7 @@ RUN \
         fonts-wqy-zenhei \
         gdb \
         gosu \
+        htop \
         nvtop \
         zlib1g-dev && \
     # Newer git from the official PPA
@@ -265,7 +266,6 @@ RUN \
         thunar-vcs-plugin \
         mousepad \
         vim \
-        htop \
         p7zip p7zip-rar \
         thunar-archive-plugin \
         xarchiver \
