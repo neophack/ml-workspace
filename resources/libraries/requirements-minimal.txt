@@ -6,68 +6,52 @@
 # build (torch 2.7.0a0+nv25.3, built for sm_70–sm_120) with stock PyPI wheels that
 # dropped sm_70, breaking V100 support.
 #
-# Most utility packages are already installed in the NGC base (numpy, pandas, scipy,
-# matplotlib, pillow, requests, tqdm, etc). We install WITHOUT version pins and
-# WITHOUT --upgrade, so pip leaves already-satisfied packages untouched and only
-# installs what's genuinely missing. This avoids ResolutionImpossible conflicts
-# between our pins and the NGC-installed versions.
+# All packages are UNPINNED and installed without --upgrade. pip's resolver leaves
+# already-satisfied NGC packages untouched (numpy, pandas, scipy, matplotlib, pillow,
+# safetensors, einops, tensorboard, scikit-learn, pydantic, psutil, etc are all
+# preinstalled by NGC) and only installs what's genuinely missing. This avoids the
+# ResolutionImpossible conflicts that occur when our pins disagree with NGC versions.
 
-## Utilities (unpinned — use NGC version if present, else install latest compatible)
+## Utilities (missing from NGC base)
 httpie
-cloudpickle
-msgpack
 h5py
 seaborn
 sqlalchemy
-pygments
-jsonschema
 loguru
-tabulate
 imageio
-dill
 simplejson
-python-dateutil
 
-## Development helper (slimmed: only the most common formatters/linters)
-black
+## Development helper (missing from NGC base)
 flake8
-isort
 autopep8
-pytest
 virtualenv
 
-## Web frameworks
+## Web frameworks (missing from NGC base)
 flask
 gunicorn
 uvicorn
 fastapi
-pydantic
 
-## ML (transformers stack — pinned to a torch-2.7-compatible release)
+## ML — transformers stack. transformers+tokenizers pinned together (they must match).
+## Compatible with torch 2.7; does NOT pull a new torch.
 transformers==4.46.3
 tokenizers==0.20.3
 accelerate==1.1.1
 peft==0.13.2
 sentencepiece==0.2.0
-safetensors==0.4.5
-einops==0.8.0
-tensorboard==2.18.0
-scikit-learn==1.5.2
+
+## ML — additional libraries (missing from NGC base)
 addict
 editdistance
 jsonlines
 markdown2
-more_itertools
 openpyxl
 sacrebleu
 shortuuid
+thop
 
-## Images
+## Images (missing from NGC base)
 opencv-python-headless==4.10.0.84
 opencv-python==4.10.0.84
 scikit-image==0.24.0
 albumentations==1.4.14
-thop
-
-## Monitoring
-psutil
