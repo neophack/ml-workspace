@@ -1,4 +1,5 @@
-# Slim ML workspace — single-port (8080) VNC desktop + SSH appliance.
+# Slim ML workspace — single-port (8080) VNC desktop + SSH appliance, plus
+# code-server (VS Code in the browser) on port 8090.
 #
 # Base:   nvcr.io/nvidia/pytorch:25.03-py3
 #         Ubuntu 24.04 LTS (noble) + Python 3.12 + CUDA 12.8.1 + cuDNN 9.8 + PyTorch 2.7.0a
@@ -316,8 +317,9 @@ RUN \
         gpustat==1.1.1 && \
     clean-layer.sh
 
-# Core ML + utility requirements (Python 3.12 compatible). No Jupyter, no zsh tooling.
-# Installed without version pins (use NGC versions where present) and without --upgrade,
+# Core ML + utility requirements (Python 3.12 compatible). No zsh tooling.
+# The browser-based editor is code-server (installed in its own Dockerfile block),
+# not Jupyter. Installed without version pins (use NGC versions where present) and without --upgrade,
 # so the NGC torch/numpy stack is preserved. NOTE: flask is intentionally omitted — it
 # requires blinker>=1.9 but the NGC image's debian-installed blinker 1.7.0 has no pip
 # RECORD file and cannot be upgraded/uninstalled. fastapi+uvicorn cover web serving.
@@ -402,6 +404,25 @@ RUN \
 ### END INPUT METHOD ###
 
 
+### CODE-SERVER ###
+
+# code-server (VS Code in the browser, https://github.com/coder/code-server) on
+# port 8090 (non-privileged, since supervisord runs as the non-root `ml` user).
+# Installed after the input-method block so the desktop/IME stack is already
+# present. The official install script detects Ubuntu 24.04 (noble) and drops the
+# binary at /usr/bin/code-server. Auth reuses the existing VNC_PW env var via the
+# PASSWORD environment variable (code-server 4.x rejects --password on the CLI);
+# the workspace root is /workspace (matches Desktop/workspace symlink).
+RUN \
+    curl -fsSL https://code-server.dev/install.sh | sh && \
+    # Fail the build loudly if code-server is missing instead of discovering
+    # it at runtime inside the container.
+    command -v code-server >/dev/null 2>&1 && \
+    clean-layer.sh
+
+### END CODE-SERVER ###
+
+
 ### CONFIGURATION ###
 
 # Copy resources into the image
@@ -458,8 +479,12 @@ ENV KMP_DUPLICATE_LIB_OK="True" \
     SHARED_LINKS_ENABLED="true" \
     DATA_ENVIRONMENT=$WORKSPACE_HOME"/environment" \
     WORKSPACE_BASE_URL="/" \
-    INCLUDE_TUTORIALS="true" \
     WORKSPACE_PORT="8080" \
+    # code-server (VS Code in the browser) listens on its own port, independent
+    # of the 8080 oneport muxer. Must be >= 1024: supervisord runs as the non-root
+    # `ml` user and cannot bind privileged ports or setuid to root. Default 8090;
+    # overridable at runtime.
+    CS_PORT="8090" \
     SHELL="/bin/bash" \
     MAX_NUM_THREADS="auto"
 
@@ -471,6 +496,32 @@ ARG ARG_BUILD_DATE="unknown" \
 ENV WORKSPACE_VERSION=$ARG_WORKSPACE_VERSION
 
 USER $NB_USER
+
+### CODE-SERVER EXTENSIONS ###
+
+# Pre-install a default set of VS Code extensions into code-server so they are
+# available on first launch. code-server resolves these from the Open VSX
+# registry (https://open-vsx.org), which all of the IDs below are published to.
+# Installed as the `ml` user so extensions land in
+# /home/ml/.local/share/code-server/extensions and load automatically. A failed
+# single extension (e.g. a transient registry error) won't abort the build:
+# the loop continues and logs which ones failed at the end.
+RUN set -euo pipefail; \
+    FAILED=""; \
+    for ext in \
+        mhutchie.git-graph \
+        ms-python.python \
+        EditorConfig.EditorConfig \
+        esbenp.prettier-vscode \
+    ; do \
+        echo "Installing code-server extension: $ext"; \
+        code-server --install-extension "$ext" || FAILED="$FAILED $ext"; \
+    done; \
+    if [ -n "$FAILED" ]; then \
+        echo "WARNING: failed to install code-server extensions:$FAILED"; \
+    fi
+
+### END CODE-SERVER EXTENSIONS ###
 
 RUN \
     sudo chmod 777 $HOME/ -R && \
@@ -487,5 +538,6 @@ ENTRYPOINT ["/tini", "-g", "--"]
 CMD ["python", "/resources/docker-entrypoint.py"]
 
 # Port 8080 is the main access port (HTTP to VNC desktop + SSH, muxed by oneport)
+# Port 8090 is code-server (VS Code in the browser), served independently.
 # Port 5901 is the raw VNC port, 3389 is the optional RDP port.
-EXPOSE 8080
+EXPOSE 8080 8090

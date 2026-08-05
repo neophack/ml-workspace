@@ -21,16 +21,7 @@ log.info("Start Workspace")
 
 ENV_RESOURCES_PATH = os.getenv("RESOURCES_PATH", "/resources")
 
-# Include tutorials
 WORKSPACE_HOME = os.getenv('WORKSPACE_HOME', "/workspace")
-INCLUDE_TUTORIALS = os.getenv('INCLUDE_TUTORIALS', "true")
-
-# Only copy all content of tutorial folder to workspace folder if it is initialy empty
-if INCLUDE_TUTORIALS.lower() == "true" and os.path.exists(WORKSPACE_HOME) and len(os.listdir(WORKSPACE_HOME)) == 0:
-    log.info("Copy tutorials to /workspace folder")
-    from distutils.dir_util import copy_tree
-    # Copy all files within tutorials folder in resources to workspace home
-    copy_tree(os.path.join(ENV_RESOURCES_PATH, "tutorials"), WORKSPACE_HOME)
 
 # restore config on startup - if CONFIG_BACKUP_ENABLED - it needs to run before other configuration 
 call("python " + ENV_RESOURCES_PATH + "/scripts/backup_restore_config.py restore", shell=True)
