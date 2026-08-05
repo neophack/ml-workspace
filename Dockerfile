@@ -205,12 +205,20 @@ RUN \
     clean-layer.sh
 
 # Create the non-root user `ml`
+# The NVIDIA base image ships an `ubuntu` user occupying UID/GID 1000.
+# Remove it so we can pin `ml` to UID/GID 1000 — the UID almost every host
+# login user has, which makes bind-mounted volumes line up owner-for-owner
+# across machines instead of showing up as a foreign `ubuntu`/1001 owner.
 RUN \
     set -e && \
     chmod g+rw /home && mkdir -p $HOME && \
-    useradd -d $HOME -s /bin/bash -G sudo $NB_USER && \
+    if id ubuntu >/dev/null 2>&1; then \
+        userdel -r ubuntu 2>/dev/null || userdel ubuntu 2>/dev/null || true; \
+    fi && \
+    groupadd -g 1000 $NB_USER 2>/dev/null || groupmod -g 1000 $NB_USER 2>/dev/null || true && \
+    useradd -u 1000 -g 1000 -d $HOME -s /bin/bash -G sudo $NB_USER && \
     echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
-    chown -R $NB_USER.$NB_USER /home/$NB_USER
+    chown -R $NB_USER:$NB_USER /home/$NB_USER
 
 # tini init + SSH server
 RUN \
