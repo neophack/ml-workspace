@@ -367,7 +367,12 @@ RUN \
         libqt5svg5 \
         libxss1 \
         fonts-droid-fallback \
-        humanity-icon-theme && \
+        humanity-icon-theme \
+        # gdk-pixbuf SVG loader. Humanity's icons (all the XFCE Applications-menu
+        # category icons, many app/panel icons) are SVG-only; without
+        # librsvg2-common GTK cannot render ANY svg icon and shows the
+        # "broken image" placeholder instead (empty menu icons).
+        librsvg2-common && \
     clean-layer.sh
 
 # Install Sogou Pinyin .deb and select fcitx as the default input method. The
