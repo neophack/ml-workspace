@@ -20,6 +20,10 @@ sqlalchemy
 loguru
 imageio
 simplejson
+## crontab: required by startup scripts (check_xfdesktop_leak.py,
+## backup_restore_config.py) — without it the container logs
+## ModuleNotFoundError: No module named 'crontab' on boot.
+python-crontab
 
 ## Development helper (missing from NGC base)
 flake8

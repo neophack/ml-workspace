@@ -3,7 +3,19 @@
 <channel name="xsettings" version="1.0">
   <property name="Net" type="empty">
     <property name="ThemeName" type="empty"/>
-    <property name="IconThemeName" type="string" value="gnome"/>
+    <!-- Icon theme. The old branches (torch-2.1 on Ubuntu 20.04) set this to
+         "gnome", backed by the `gnome-icon-theme` package. That package was
+         removed in Ubuntu 24.04 (Noble): `apt-cache policy gnome-icon-theme`
+         has no candidate. With "gnome" configured but absent, XFCE falls back
+         to the sparse hicolor theme and every Applications-menu category icon
+         (Settings, Accessories, Development, Education, Graphics, Internet...)
+         renders as a broken/blank placeholder — exactly the missing icons
+         reported here. "Humanity" ships in the Noble base, provides all the
+         XFCE menu category icons (applications-development, applications-
+         graphics, ...), the panel launcher icons (system-file-manager,
+         utilities-terminal, go-home), and Inherits=Adwaita,hicolor as a
+         fallback, so it is a drop-in full-coverage replacement. -->
+    <property name="IconThemeName" type="string" value="Humanity"/>
     <property name="DoubleClickTime" type="empty"/>
     <property name="DoubleClickDistance" type="empty"/>
     <property name="DndDragThreshold" type="empty"/>

@@ -252,12 +252,21 @@ ENV PATH=$HOME/.local/bin:$PATH
 ### GUI TOOLS ###
 
 # xfce4 desktop + lightweight editors / file tools (no browser — SSH/VNC server use case)
+#
+# IMPORTANT (Ubuntu 24.04 / Noble): do NOT add the `ppa:xubuntu-dev/staging` PPA
+# that the torch-2.1 branch used on 20.04. On Noble the PPA's apt-get update
+# fails (signature/network), and because the previous block ended with
+# `... || true` the whole `apt-get install` failure was silently swallowed —
+# the image "built" but xfce4, xauth, xinit and dbus-x11 were never installed,
+# so TigerVNC died on startup with `couldn't find "xauth" on your PATH` and
+# supervisord reported a vncserver crash loop. Noble's official universe repo
+# already ships xfce4 4.18, so the PPA is unnecessary. The optional purge/remove
+# steps at the end are allowed to find no packages without aborting the build,
+# but the core install above MUST succeed (no `|| true` swallowing it).
 RUN \
-    add-apt-repository -y ppa:xubuntu-dev/staging && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         xfce4 \
-        gconf2 \
         xfce4-terminal \
         xfce4-clipman \
         xterm \
@@ -271,8 +280,14 @@ RUN \
         xarchiver \
         gvfs-backends \
         gigolo && \
-    apt-get purge -y pm-utils xscreensaver* 2>/dev/null || true && \
-    apt-get remove -y app-install-data gnome-user-guide 2>/dev/null || true && \
+    { apt-get purge -y pm-utils 'xscreensaver*' || true ; } && \
+    { apt-get remove -y app-install-data gnome-user-guide || true ; } && \
+    # Fail the build loudly if any VNC-critical binary is missing, so a broken
+    # apt state can never again produce an image that silently lacks xauth.
+    command -v xauth >/dev/null 2>&1 && \
+    command -v xinit >/dev/null 2>&1 && \
+    command -v dbus-launch >/dev/null 2>&1 && \
+    command -v startxfce4 >/dev/null 2>&1 && \
     clean-layer.sh
 
 # TigerVNC + noVNC + websockify (VNC web desktop on 6901, raw VNC on 5901)
@@ -288,34 +303,6 @@ RUN \
     clean-layer.sh
 
 ### END GUI TOOLS ###
-
-
-### INPUT METHOD (Baidu Pinyin via fcitx) ###
-
-COPY resources/fcitx-baidupinyin_1.0.1.0_amd64.deb $RESOURCES_PATH/
-
-# fcitx 4 + Baidu Pinyin. Qt5 runtime libs satisfy the deb's dependencies.
-# Note: qt5-default was dropped from Ubuntu (>=21.04) and is not needed (no qmake step here).
-RUN \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-        fcitx \
-        fcitx-bin \
-        gdebi \
-        im-config \
-        libgsettings-qt-dev \
-        libqt5qml5 \
-        libqt5quick5 \
-        libqt5quickwidgets5 \
-        qml-module-qtquick2 \
-        libxss-dev \
-        eog && \
-    gdebi -n $RESOURCES_PATH/fcitx-baidupinyin_1.0.1.0_amd64.deb && \
-    im-config -n fcitx && \
-    clean-layer.sh
-
-### END INPUT METHOD ###
-
 
 ### PYTHON PACKAGES ###
 
@@ -340,6 +327,74 @@ RUN \
     clean-layer.sh
 
 ### END PYTHON PACKAGES ###
+
+### INPUT METHOD (Sogou Pinyin via fcitx) ###
+
+COPY resources/sogoupinyin_4.2.1.145_amd64.deb $RESOURCES_PATH/
+
+# fcitx 4 + Sogou Pinyin. The official .deb targets older Ubuntu releases but runs
+# on 24.04 when the fcitx stack and the Qt5/QML libraries it needs are present.
+# We install fcitx and its frontends explicitly because Ubuntu 24.04's metapackage
+# with --no-install-recommends no longer pulls in the UI and GTK/Qt frontends,
+# which makes the IME fail to start.
+RUN \
+    apt-get update && \
+    # Sogou Pinyin 4.2.1's candidate-box service links against Qt5Svg and Xss;
+    # without them it silently fails to start, so install those runtime libs here.
+    apt-get install -y --no-install-recommends \
+        fcitx \
+        fcitx-bin \
+        fcitx-data \
+        fcitx-libs \
+        fcitx-ui-classic \
+        fcitx-module-dbus \
+        fcitx-module-kimpanel \
+        fcitx-module-x11 \
+        fcitx-frontend-gtk2 \
+        fcitx-frontend-gtk3 \
+        fcitx-frontend-qt5 \
+        fcitx-config-gtk \
+        gdebi \
+        im-config \
+        lsb-release \
+        x11-utils \
+        libxtst6 \
+        libqt5qml5 \
+        libqt5quick5 \
+        libqt5quickwidgets5 \
+        qml-module-qtquick2 \
+        libgsettings-qt1 \
+        libqt5svg5 \
+        libxss1 \
+        fonts-droid-fallback \
+        humanity-icon-theme && \
+    clean-layer.sh
+
+# Install Sogou Pinyin .deb and select fcitx as the default input method. The
+# package ships /etc/xdg/autostart desktop files for its service and watchdog;
+# make sure the fcitx input method itself also autostarts in the XFCE/VNC session.
+RUN \
+    gdebi -n $RESOURCES_PATH/sogoupinyin_4.2.1.145_amd64.deb && \
+    im-config -n fcitx && \
+    (cp /usr/share/applications/fcitx.desktop /etc/xdg/autostart/fcitx.desktop || true) && \
+    # Disable Sogou's own xdg-autostart entries: they race fcitx (the service
+    # starts before fcitx is on the session bus, then exits silently and the
+    # candidate box never appears). supervisord manages the service instead
+    # (resources/supervisor/programs/sogoupinyin.conf), with autorestart.
+    for f in /etc/xdg/autostart/sogoupinyin-service.desktop \
+             /etc/xdg/autostart/sogoupinyin-watchdog.desktop; do \
+        [ -f "$f" ] && printf '\nHidden=true\n' >> "$f"; \
+    done && \
+    # Fail the build if Sogou's candidate-box service still has missing .so
+    # dependencies, instead of discovering it at runtime inside the container.
+    if ldd /opt/sogoupinyin/files/bin/sogoupinyin-service | grep -q "not found"; then \
+        echo "ERROR: sogoupinyin-service has unmet library dependencies:"; \
+        ldd /opt/sogoupinyin/files/bin/sogoupinyin-service | grep "not found"; \
+        exit 1; \
+    fi && \
+    clean-layer.sh
+
+### END INPUT METHOD ###
 
 
 ### CONFIGURATION ###

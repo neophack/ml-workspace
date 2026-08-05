@@ -1,0 +1,5 @@
+# ~/.xinputrc — set Fcitx as the default XIM input method.
+XIM=fcitx
+XIM_PROGRAM=fcitx
+GTK_IM_MODULE=fcitx
+QT_IM_MODULE=fcitx

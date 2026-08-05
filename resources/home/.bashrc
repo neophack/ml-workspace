@@ -71,6 +71,11 @@ fi
 export PATH="$HOME/.local/bin:$PATH"
 export WORKSPACE_HOME="${WORKSPACE_HOME:-/workspace}"
 
+# --- Fcitx / Sogou Pinyin input method environment ---
+export GTK_IM_MODULE=fcitx
+export QT_IM_MODULE=fcitx
+export XMODIFIERS="@im=fcitx"
+
 # --- Colored prompt ---
 # Green user@host, blue cwd, magenta git branch, reset. Works on dark VNC terminals.
 # The git branch is resolved at prompt-display time via $(...) inside PS1.

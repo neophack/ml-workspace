@@ -27,7 +27,22 @@ chmod 600 $HOME/.vnc/passwd
 
 config_file=$HOME/.vnc/config
 touch $config_file
-printf "geometry=$VNC_RESOLUTION\ndepth=$VNC_COL_DEPTH\ndesktop=Desktop-GUI\nsession=xfce" > ~/.vnc/config
+# NOTE: do NOT set `session=xfce` here. On Ubuntu 24.04 (NGC pytorch:25.03-py3
+# base) relying on the built-in session launcher leaves xfce4-session without a
+# D-Bus session bus, so it exits immediately and Xvnc tears down ~5s later —
+# observed as a supervisord crash loop. The desktop is started instead via
+# ~/.vnc/xstartup (see below), which works on both 20.04 and 24.04.
+printf "geometry=$VNC_RESOLUTION\ndepth=$VNC_COL_DEPTH\ndesktop=Desktop-GUI" > "$config_file"
+
+# Deploy a desktop-launching xstartup. TigerVNC runs ~/.vnc/xstartup to bring
+# up the session; without it (or with only `session=`) the desktop fails to
+# start on newer Ubuntu bases.
+xstartup_src="${RESOURCES_PATH:-/resources}/scripts/xstartup-template.sh"
+xstartup_dst="$HOME/.vnc/xstartup"
+if [ -f "$xstartup_src" ]; then
+    cp -f "$xstartup_src" "$xstartup_dst"
+    chmod 755 "$xstartup_dst"
+fi
 command="/usr/libexec/vncserver $DISPLAY"
 
 # Proxy signals
@@ -64,16 +79,22 @@ find $HOME/.vnc/ -name '*.log' -delete
 
 sleep 1
 $command &> "$HOME/.vnc/vnc.log" &
-sleep 5
-
+# Capture the PID of the vncserver child immediately (before any other
+# background job is spawned, so $! refers unambiguously to vncserver).
 _wait_pid=$!
 
 echo "Started VNC Server $_wait_pid"
 
+sleep 5
+
 tail -f -q --pid $_wait_pid $HOME/.vnc/*.log &
 
-# Disable screensaver and power management - needs to run after the vnc server is started
-xset s noblank && xset s off
+# Disable screensaver and power management - needs to run after the vnc server is started.
+# Run on the VNC display and tolerate failure: under `set -eu` a non-zero xset
+# (e.g. the server not having fully opened its socket yet on 24.04) would
+# otherwise kill the whole script and trip the supervisord crash loop.
+DISPLAY=$DISPLAY xset s noblank 2>/dev/null || true
+DISPLAY=$DISPLAY xset s off 2>/dev/null || true
 # dpms option not available: xset -display :1 -dpms &&
 
 # Loop while the pidfile and the process exist

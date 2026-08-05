@@ -56,6 +56,8 @@ elif args.mode == "backup":
     backup_selection = "--include='/.config' \
                         --include='/.config/xfce4/' --include='/.config/xfce4/xfconf/***' \
                         --include='/.config/fcitx/' \
+                        --include='/.config/SogouPY/' \
+                        --include='/.sogouinput/' \
                         --include='/.config/Code/' --include='/.config/Code/User/' --include='/.config/Code/User/settings.json' \
                         --include='/.config/gtk-3.0/' --include='/.config/gtk-3.0/bookmarks' \
                         --include='/.gitconfig' \
