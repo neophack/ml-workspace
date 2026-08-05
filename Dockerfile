@@ -503,11 +503,21 @@ USER $NB_USER
 # available on first launch. code-server resolves these from the Open VSX
 # registry (https://open-vsx.org), which all of the IDs below are published to.
 # Installed as the `ml` user so extensions land in
-# /home/ml/.local/share/code-server/extensions and load automatically. A failed
-# single extension (e.g. a transient registry error) won't abort the build:
-# the loop continues and logs which ones failed at the end.
-RUN set -euo pipefail; \
-    FAILED=""; \
+# /home/ml/.local/share/code-server/extensions and load automatically.
+#
+# Why the sudo chown/chmod up front: at this point in the build the later
+# `sudo chmod 777 $HOME -R` step has NOT run yet. The `COPY resources/home/`
+# step above drops files as root:root, and various prior RUNs leave /home/ml
+# owned by root or without write bits for `ml`. Without fixing ownership here,
+# code-server fails with "EACCES: permission denied, mkdir
+# '/home/ml/.config/code-server'". We normalize ownership of the whole home
+# dir, create the two dirs code-server needs, then install. Failures here MUST
+# abort the build (an earlier version swallowed errors and produced an image
+# with no extensions, discovered only at runtime).
+RUN sudo chown -R $NB_USER:$NB_USER /home/$NB_USER && \
+    sudo chmod -R u+rwX /home/$NB_USER && \
+    mkdir -p /home/$NB_USER/.config/code-server \
+             /home/$NB_USER/.local/share/code-server/extensions && \
     for ext in \
         mhutchie.git-graph \
         ms-python.python \
@@ -515,11 +525,8 @@ RUN set -euo pipefail; \
         esbenp.prettier-vscode \
     ; do \
         echo "Installing code-server extension: $ext"; \
-        code-server --install-extension "$ext" || FAILED="$FAILED $ext"; \
-    done; \
-    if [ -n "$FAILED" ]; then \
-        echo "WARNING: failed to install code-server extensions:$FAILED"; \
-    fi
+        code-server --install-extension "$ext"; \
+    done
 
 ### END CODE-SERVER EXTENSIONS ###
 
