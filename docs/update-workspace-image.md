@@ -20,7 +20,7 @@ We plan to do a full workspace image update (all libraries and tools) about ever
    - TigerVNC: [latest release](https://dl.bintray.com/tigervnc/stable/)
    - noVNC: [latest release](https://github.com/novnc/noVNC/releases/latest)
    - Websockify: [latest release](https://github.com/novnc/websockify/releases/latest)
-   - VS Code Server: [latest release](https://github.com/cdr/code-server/releases/latest)
+   - VS Code Server: [latest release](https://github.com/gitpod-io/openvscode-server/releases/latest)
    - Ungit: [latest release](https://www.npmjs.com/package/ungit)
    - FileBrowser: [latest release](https://github.com/filebrowser/filebrowser/releases/latest)
 

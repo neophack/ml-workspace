@@ -118,6 +118,16 @@ The workspace provides a variety of configuration options that can be used by se
         <td>8080</td>
     </tr>
     <tr>
+        <td>CS_PORT</td>
+        <td>Port for OpenVSCode Server (VS Code in the browser), served independently of the main workspace port. Must be >= 1024 (supervisord runs as the non-root <code>ml</code> user).</td>
+        <td>8090</td>
+    </tr>
+    <tr>
+        <td>CS_REQUIRE_TOKEN</td>
+        <td>When <code>true</code> (default), OpenVSCode Server requires a connection token set to <code>VNC_PW</code> — browse to <code>http://host:8090/?tkn=&lt;VNC_PW&gt;</code>. When <code>false</code>, it runs without a token (use only behind network isolation).</td>
+        <td>true</td>
+    </tr>
+    <tr>
         <td>CONFIG_BACKUP_ENABLED</td>
         <td>Automatically backup and restore user configuration to the persisted <code>/workspace</code> folder, such as the .ssh, .jupyter, or .gitconfig from the users home directory.</td>
         <td>true</td>
@@ -456,7 +466,7 @@ Once you are connected, you will see a desktop GUI that allows you to install an
 
 ### Visual Studio Code
 
-[Visual Studio Code](https://github.com/microsoft/vscode) (`Open Tool -> VS Code`) is an open-source lightweight but powerful code editor with built-in support for a variety of languages and a rich ecosystem of extensions. It combines the simplicity of a source code editor with powerful developer tooling, like IntelliSense code completion and debugging. The workspace integrates VS Code as a web-based application accessible through the browser-based on the awesome [code-server](https://github.com/cdr/code-server) project. It allows you to customize every feature to your liking and install any number of third-party extensions.
+[Visual Studio Code](https://github.com/microsoft/vscode) (`Open Tool -> VS Code`) is an open-source lightweight but powerful code editor with built-in support for a variety of languages and a rich ecosystem of extensions. It combines the simplicity of a source code editor with powerful developer tooling, like IntelliSense code completion and debugging. The workspace integrates VS Code as a web-based application accessible through the browser-based on the awesome [OpenVSCode Server](https://github.com/gitpod-io/openvscode-server) project. It allows you to customize every feature to your liking and install any number of third-party extensions.
 
 <p align="center"><img src="https://github.com/ml-tooling/ml-workspace/raw/main/docs/images/features/vs-code.png"/></p>
 
@@ -569,7 +579,7 @@ autossh -M 0 -f -nNT -L 5000:localhost:5901 my-workspace
 Port tunneling is quite useful when you have started any server-based tool within the workspace that you like to make accessible for another machine. In its default setting, the workspace has a variety of tools already running on different ports, such as:
 
 - `8080`: Main workspace port with access to all integrated tools.
-- `8090`: Jupyter server.
+- `8090`: OpenVSCode Server (VS Code in the browser).
 - `8054`: VS Code server.
 - `5901`: VNC server.
 - `22`: SSH server.
@@ -888,7 +898,7 @@ If you want to directly connect to the workspace via a VNC client (not using the
     </tr>
     <tr>
         <td>VNC_PW</td>
-        <td>Password of VNC connection. This password only needs to be secure if the VNC server is directly exposed. If it is used via noVNC, it is already protected based on the configured authentication mechanism.</td>
+        <td>Password of VNC connection. This password only needs to be secure if the VNC server is directly exposed. If it is used via noVNC, it is already protected based on the configured authentication mechanism. This value is also reused as the OpenVSCode Server connection token (see CS_REQUIRE_TOKEN).</td>
         <td>vncpassword</td>
     </tr>
     <tr>

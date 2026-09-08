@@ -95,3 +95,6 @@ hs_err_pid*
 *.swo
 temp/*
 .DS_Store
+yfml-vnc.tar
+matlab-vnc.tar
+.zcode/

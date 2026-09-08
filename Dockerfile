@@ -1,5 +1,6 @@
 # Slim ML workspace — single-port (8080) VNC desktop + SSH appliance, plus
-# code-server (VS Code in the browser) on port 8090.
+# OpenVSCode Server (VS Code in the browser) on port 8090. The XFCE desktop
+# ships the Chromium browser (open-source Chrome) and PyCharm Community.
 #
 # Base:   nvcr.io/nvidia/pytorch:25.03-py3
 #         Ubuntu 24.04 LTS (noble) + Python 3.12 + CUDA 12.8.1 + cuDNN 9.8 + PyTorch 2.7.0a
@@ -101,8 +102,8 @@ ENV LC_ALL="en_US.UTF-8" \
 
 # Install core apt packages (Ubuntu 24.04 / noble).
 # Removed vs. the old image: unp (gone from noble), zlibc (obsolete), sslh (replaced by oneport),
-# ttf-wqy-zenhei -> fonts-wqy-zenhei (renamed), chromium (PPA stale on noble, not needed for a
-# VNC+SSH server), node/npm/typescript toolchain, pyenv, sdkman.
+# ttf-wqy-zenhei -> fonts-wqy-zenhei (renamed), node/npm/typescript toolchain, pyenv, sdkman.
+# (chromium is installed from ppa:xtradeb/apps in its own block below.)
 RUN \
     apt-get update --fix-missing && \
     apt-get install -y sudo apt-utils && \
@@ -260,7 +261,8 @@ ENV PATH=$HOME/.local/bin:$PATH
 
 ### GUI TOOLS ###
 
-# xfce4 desktop + lightweight editors / file tools (no browser — SSH/VNC server use case)
+# xfce4 desktop + lightweight editors / file tools (browser and IDE are
+# installed in their own blocks below)
 #
 # IMPORTANT (Ubuntu 24.04 / Noble): do NOT add the `ppa:xubuntu-dev/staging` PPA
 # that the torch-2.1 branch used on 20.04. On Noble the PPA's apt-get update
@@ -311,14 +313,52 @@ RUN \
     fix-permissions.sh ${RESOURCES_PATH} && \
     clean-layer.sh
 
+# Chromium — the open-source Google Chrome. Ported from the torch-2.1 branch,
+# which installed `chromium-browser` from ppa:saiarcot895/chromium-beta on
+# Ubuntu 20.04. That PPA is stale (last release targets kinetic, no noble
+# builds), and noble's official `chromium-browser` is only a snap stub (snap
+# does not work inside Docker). ppa:xtradeb/apps is the maintained successor
+# that ships the latest real .deb chromium builds for Ubuntu 24.04 (noble).
+RUN \
+    add-apt-repository -y ppa:xtradeb/apps && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        chromium \
+        chromium-l10n && \
+    ln -sf /usr/bin/chromium /usr/bin/google-chrome && \
+    # Fail the build loudly if the browser binary is missing.
+    command -v chromium >/dev/null 2>&1 && \
+    clean-layer.sh
+
+# PyCharm Community — install script taken verbatim from the torch-2.1 branch
+# (resources/tools/pycharm.sh), including its pinned version 2022.2.2.
+# Downloads the official JetBrains tarball into /opt/pycharm, symlinks
+# `pycharm-community` onto PATH and adds an XFCE desktop entry.
+# NOTE: amd64 only — JetBrains did not publish an ARM64 Linux tarball for
+# PyCharm Community before 2022.3.
+COPY resources/tools/pycharm.sh $RESOURCES_PATH/tools/pycharm.sh
+RUN \
+    /bin/bash $RESOURCES_PATH/tools/pycharm.sh && \
+    # Fail the build loudly if the launcher is missing.
+    command -v pycharm-community >/dev/null 2>&1 && \
+    clean-layer.sh
+
 ### END GUI TOOLS ###
 
 ### PYTHON PACKAGES ###
 
 # GPU runtime helpers + ONNX. gpustat needs nvidia-ml-py (already in the NGC base as
 # 12.570.86); do NOT install nvidia-ml-py3 (an old fork that conflicts with it).
+# torchaudio 2.7.0 matches the NGC torch 2.7.0a0 and MUST be installed with
+# --no-deps: its PyPI metadata depends on torch==2.7.0, and letting pip resolve
+# that would replace the NGC-optimized torch build with a stock PyPI wheel
+# (which dropped sm_70, breaking V100). Note the stock torchaudio wheel itself
+# also only ships sm_75+ CUDA kernels — torchaudio ops without a V100 kernel
+# will fail on sm_70; the common paths (load/save/resample via sox/soundfile
+# backends) are unaffected.
 RUN \
     pip install --no-cache-dir setuptools_scm wheel && \
+    pip install --no-cache-dir --no-deps torchaudio==2.7.0 && \
     pip install --no-cache-dir --no-build-isolation \
         onnxruntime-gpu==1.20.2 \
         onnx \
@@ -326,7 +366,7 @@ RUN \
     clean-layer.sh
 
 # Core ML + utility requirements (Python 3.12 compatible). No zsh tooling.
-# The browser-based editor is code-server (installed in its own Dockerfile block),
+# The browser-based editor is OpenVSCode Server (installed in its own Dockerfile block),
 # not Jupyter. Installed without version pins (use NGC versions where present) and without --upgrade,
 # so the NGC torch/numpy stack is preserved. NOTE: flask is intentionally omitted — it
 # requires blinker>=1.9 but the NGC image's debian-installed blinker 1.7.0 has no pip
@@ -412,23 +452,44 @@ RUN \
 ### END INPUT METHOD ###
 
 
-### CODE-SERVER ###
+### OPENVSCODE SERVER ###
 
-# code-server (VS Code in the browser, https://github.com/coder/code-server) on
-# port 8090 (non-privileged, since supervisord runs as the non-root `ml` user).
-# Installed after the input-method block so the desktop/IME stack is already
-# present. The official install script detects Ubuntu 24.04 (noble) and drops the
-# binary at /usr/bin/code-server. Auth reuses the existing VNC_PW env var via the
-# PASSWORD environment variable (code-server 4.x rejects --password on the CLI);
-# the workspace root is /workspace (matches Desktop/workspace symlink).
-RUN \
-    curl -fsSL https://code-server.dev/install.sh | sh && \
-    # Fail the build loudly if code-server is missing instead of discovering
-    # it at runtime inside the container.
-    command -v code-server >/dev/null 2>&1 && \
+# OpenVSCode Server (VS Code in the browser,
+# https://github.com/gitpod-io/openvscode-server) on port 8090 (non-privileged,
+# since supervisord runs as the non-root `ml` user). Installed after the
+# input-method block so the desktop/IME stack is already present.
+#
+# We download the official release tarball from GitHub (not the old
+# code-server.dev installer) and extract it under /opt/openvscode-server, then
+# symlink the CLI entry point (bin/openvscode-server) onto PATH. The asset
+# suffix maps Docker's TARGETARCH (arm64 / amd64) to the release naming
+# (linux-arm64 / linux-x64). Pinning OPENVSCODE_VERSION makes future upgrades a
+# one-line change; bumping it pulls a newer VS Code base.
+#
+# Auth reuses the existing VNC_PW env var as the connection token (see
+# start-openvscode-server.sh); the workspace root is /workspace (matches the
+# Desktop/workspace symlink).
+ARG OPENVSCODE_VERSION=1.109.5
+ARG TARGETARCH
+RUN set -eux; \
+    case "$TARGETARCH" in \
+        arm64) asset_arch=arm64 ;; \
+        amd64) asset_arch=x64 ;; \
+        *) echo "Unsupported TARGETARCH: $TARGETARCH"; exit 1 ;; \
+    esac; \
+    asset="openvscode-server-v${OPENVSCODE_VERSION}-linux-${asset_arch}.tar.gz"; \
+    curl -fsSL -o "/tmp/${asset}" \
+        "https://github.com/gitpod-io/openvscode-server/releases/download/openvscode-server-v${OPENVSCODE_VERSION}/${asset}"; \
+    mkdir -p /opt/openvscode-server; \
+    tar xzf "/tmp/${asset}" -C /opt/openvscode-server --strip-components=1; \
+    rm -f "/tmp/${asset}"; \
+    ln -sf /opt/openvscode-server/bin/openvscode-server /usr/local/bin/openvscode-server; \
+    # Fail the build loudly if the binary is missing instead of discovering it
+    # at runtime inside the container.
+    command -v openvscode-server >/dev/null 2>&1; \
     clean-layer.sh
 
-### END CODE-SERVER ###
+### END OPENVSCODE SERVER ###
 
 
 ### CONFIGURATION ###
@@ -488,11 +549,17 @@ ENV KMP_DUPLICATE_LIB_OK="True" \
     DATA_ENVIRONMENT=$WORKSPACE_HOME"/environment" \
     WORKSPACE_BASE_URL="/" \
     WORKSPACE_PORT="8080" \
-    # code-server (VS Code in the browser) listens on its own port, independent
-    # of the 8080 oneport muxer. Must be >= 1024: supervisord runs as the non-root
-    # `ml` user and cannot bind privileged ports or setuid to root. Default 8090;
-    # overridable at runtime.
+    # OpenVSCode Server (VS Code in the browser) listens on its own port,
+    # independent of the 8080 oneport muxer. Must be >= 1024: supervisord runs
+    # as the non-root `ml` user and cannot bind privileged ports or setuid to
+    # root. Default 8090; overridable at runtime.
     CS_PORT="8090" \
+    # Token toggle for OpenVSCode Server. Default true: the VNC_PW value is used
+    # as the connection token (browse to http://host:8090/?tkn=<VNC_PW>). Set to
+    # false to run without a token (--without-connection-token) when the port is
+    # already isolated at the network level. (Named ..._TOKEN, not ..._AUTH, to
+    # avoid the buildkit SecretsUsedInArgOrEnv lint that keys off "auth".)
+    CS_REQUIRE_TOKEN="true" \
     SHELL="/bin/bash" \
     MAX_NUM_THREADS="auto"
 
@@ -505,38 +572,36 @@ ENV WORKSPACE_VERSION=$ARG_WORKSPACE_VERSION
 
 USER $NB_USER
 
-### CODE-SERVER EXTENSIONS ###
+### OPENVSCODE SERVER EXTENSIONS ###
 
-# Pre-install a default set of VS Code extensions into code-server so they are
-# available on first launch. code-server resolves these from the Open VSX
-# registry (https://open-vsx.org), which all of the IDs below are published to.
-# Installed as the `ml` user so extensions land in
-# /home/ml/.local/share/code-server/extensions and load automatically.
+# Pre-install a default set of VS Code extensions into OpenVSCode Server so
+# they are available on first launch. OpenVSCode Server resolves these from the
+# Open VSX registry (https://open-vsx.org), which all of the IDs below are
+# published to. Installed as the `ml` user into the extensions dir under
+# ~/.local/share/openvscode-server/extensions; the launcher passes
+# --extensions-dir with the same path so they load at runtime.
 #
 # Why the sudo chown/chmod up front: at this point in the build the later
 # `sudo chmod 777 $HOME -R` step has NOT run yet. The `COPY resources/home/`
 # step above drops files as root:root, and various prior RUNs leave /home/ml
 # owned by root or without write bits for `ml`. Without fixing ownership here,
-# code-server fails with "EACCES: permission denied, mkdir
-# '/home/ml/.config/code-server'". We normalize ownership of the whole home
-# dir, create the two dirs code-server needs, then install. Failures here MUST
-# abort the build (an earlier version swallowed errors and produced an image
-# with no extensions, discovered only at runtime).
+# OpenVSCode Server fails with "EACCES: permission denied, mkdir". We normalize
+# ownership of the whole home dir, create the extensions dir, then install.
+# Failures here MUST abort the build (an earlier version swallowed errors and
+# produced an image with no extensions, discovered only at runtime).
+ENV OPENVSCODE_EXTENSIONS_DIR=/home/ml/.local/share/openvscode-server/extensions
 RUN sudo chown -R $NB_USER:$NB_USER /home/$NB_USER && \
     sudo chmod -R u+rwX /home/$NB_USER && \
-    mkdir -p /home/$NB_USER/.config/code-server \
-             /home/$NB_USER/.local/share/code-server/extensions && \
+    mkdir -p "$OPENVSCODE_EXTENSIONS_DIR" && \
     for ext in \
         mhutchie.git-graph \
         ms-python.python \
-        EditorConfig.EditorConfig \
-        esbenp.prettier-vscode \
     ; do \
-        echo "Installing code-server extension: $ext"; \
-        code-server --install-extension "$ext"; \
+        echo "Installing OpenVSCode Server extension: $ext"; \
+        openvscode-server --extensions-dir "$OPENVSCODE_EXTENSIONS_DIR" --install-extension "$ext"; \
     done
 
-### END CODE-SERVER EXTENSIONS ###
+### END OPENVSCODE SERVER EXTENSIONS ###
 
 RUN \
     sudo chmod 777 $HOME/ -R && \
@@ -553,6 +618,6 @@ ENTRYPOINT ["/tini", "-g", "--"]
 CMD ["python", "/resources/docker-entrypoint.py"]
 
 # Port 8080 is the main access port (HTTP to VNC desktop + SSH, muxed by oneport)
-# Port 8090 is code-server (VS Code in the browser), served independently.
+# Port 8090 is OpenVSCode Server (VS Code in the browser), served independently.
 # Port 5901 is the raw VNC port, 3389 is the optional RDP port.
 EXPOSE 8080 8090
