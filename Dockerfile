@@ -358,7 +358,7 @@ RUN \
 # backends) are unaffected.
 RUN \
     pip install --no-cache-dir setuptools_scm wheel && \
-    pip install --no-cache-dir --no-deps torchaudio==2.7.0 && \
+    pip install --no-cache-dir --no-deps torchaudio==2.7.0+cu128 -i https://download.pytorch.org/whl/cu128 && \
     pip install --no-cache-dir --no-build-isolation \
         onnxruntime-gpu==1.20.2 \
         onnx \

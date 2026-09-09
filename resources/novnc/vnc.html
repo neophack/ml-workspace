@@ -57,11 +57,118 @@
 
     <script src="app/error-handler.js"></script>
     <script type="module" crossorigin="anonymous" src="app/ui.js"></script>
-    <!-- CUSTOM CODE -->
-    <link
-        href="https://fonts.googleapis.com/css?family=Roboto"
-        rel="stylesheet"
-    />
+    <!-- CUSTOM CODE: Apple-style connect screen -->
+    <style>
+        :root {
+            --vnc-font: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+                "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+            --vnc-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo,
+                Consolas, monospace;
+        }
+
+        #noVNC_connect_dlg {
+            font-family: var(--vnc-font);
+            text-align: center;
+        }
+
+        .vnc-hero {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 64px;
+            padding: 24px;
+        }
+
+        /* Environment detail card (hidden on narrow screens) */
+        .vnc-specs {
+            background: rgba(255, 255, 255, 0.07);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 18px;
+            box-shadow: 0 18px 44px rgba(0, 0, 0, 0.35);
+            padding: 22px 28px;
+            text-align: left;
+            white-space: nowrap;
+            color: rgba(255, 255, 255, 0.72);
+            font-family: var(--vnc-mono);
+            font-size: 12.5px;
+            line-height: 1.9;
+            letter-spacing: 0.01em;
+        }
+        .vnc-specs .vnc-specs-title {
+            font-family: var(--vnc-font);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.45);
+            margin-bottom: 10px;
+        }
+
+        .vnc-hero-right {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 34px;
+        }
+
+        h1#noVNC_logo {
+            font-family: var(--vnc-font);
+            color: #f5f5f7;
+            text-shadow: none;
+            font-size: clamp(48px, 7vw, 104px);
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 1.05;
+            text-align: center;
+            margin: 0;
+        }
+
+        #noVNC_connect_button {
+            border-radius: 999px;
+            background: #ffffff;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+            margin: 0;
+            padding: 0;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        #noVNC_connect_button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 14px 34px rgba(0, 0, 0, 0.42);
+        }
+        #noVNC_connect_button:active {
+            transform: scale(0.97);
+        }
+        #noVNC_connect_button div {
+            border: none;
+            background: none;
+            color: #1d1d1f;
+            font-family: var(--vnc-font);
+            font-size: 17px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            padding: 13px 58px;
+            margin: 0;
+        }
+
+        /* Narrow screens: hide the environment details */
+        @media (max-width: 900px) {
+            .vnc-specs {
+                display: none;
+            }
+            .vnc-hero {
+                gap: 0;
+            }
+        }
+        @media (max-width: 480px) {
+            #noVNC_connect_button div {
+                padding: 11px 44px;
+                font-size: 15px;
+            }
+        }
+    </style>
     <!-- END CUSTOM CODE -->
 </head>
 
@@ -275,26 +382,10 @@
     <!-- Connect button -->
     <div class="noVNC_center">
         <div id="noVNC_connect_dlg">
-            <!-- CUSTOM CODE: Replace logo and connect button -->
-            <div
-            style="
-                display: flex;
-                flex-direction: row;
-                align-items: center;
-                justify-content: center;
-                gap: 60px;
-            "
-            >
-            <div
-            style="
-                color: rgba(255, 255, 255, 0.85);
-                font-family: 'Roboto', sans-serif;
-                font-size: 13px;
-                line-height: 1.6;
-                text-align: left;
-                white-space: nowrap;
-            "
-            >
+            <!-- CUSTOM CODE: Apple-style layout, details hidden on narrow screens -->
+            <div class="vnc-hero">
+            <div class="vnc-specs">
+            <div class="vnc-specs-title">Environment</div>
             Ubuntu 24.04 including Python 3.12<br />
             NVIDIA CUDA 12.8.1.012<br />
             NVIDIA cuBLAS 12.8.4.1<br />
@@ -321,25 +412,12 @@
             TransformerEngine 2.1<br />
             TensorRT Model Optimizer 0.23
             </div>
-            <div>
-            <h1
-            id="noVNC_logo"
-            style="
-                color: white;
-                text-shadow: none;
-                font-family: 'Roboto', sans-serif;
-                line-height: initial;
-                text-align: center;
-                font-size: 120px;
-            "
-            >
+            <div class="vnc-hero-right">
+            <h1 id="noVNC_logo">
             Torch 2.7<br />Desktop<br />VNC
             </h1>
-            <div
-            id="noVNC_connect_button"
-            style="background: #ffffff; box-shadow: initial"
-            >
-            <div style="color: black; border: initial; background: initial">
+            <div id="noVNC_connect_button">
+            <div>
                 Connect
             </div>
             </div>
