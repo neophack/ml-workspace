@@ -1,6 +1,7 @@
 # Slim ML workspace — single-port (8080) VNC desktop + SSH appliance, plus
 # OpenVSCode Server (VS Code in the browser) on port 8090. The XFCE desktop
-# ships the Chromium browser (open-source Chrome) and PyCharm Community.
+# ships the Chromium browser (open-source Chrome), ZCode (Electron IDE) and
+# PyCharm Community.
 #
 # Base:   nvcr.io/nvidia/pytorch:25.03-py3
 #         Ubuntu 24.04 LTS (noble) + Python 3.12 + CUDA 12.8.1 + cuDNN 9.8 + PyTorch 2.7.0a
@@ -326,6 +327,16 @@ RUN \
         chromium \
         chromium-l10n && \
     ln -sf /usr/bin/chromium /usr/bin/google-chrome && \
+    # Container-safe Chromium flags. Chromium's default sandbox cannot run inside
+    # Docker (no user namespaces / setuid sandbox), so it crashes on startup.
+    # The Ubuntu chromium launcher script sources every file in /etc/chromium.d/,
+    # so dropping flags there is the official, upgrade-proof mechanism — it also
+    # covers the google-chrome symlink and any wrapper invocation (e.g. ZCode's
+    # built-in browser).
+    printf '%s\n' \
+        '# Disable the sandbox and GPU acceleration inside the container.' \
+        'export CHROMIUM_FLAGS="${CHROMIUM_FLAGS} --no-sandbox --disable-gpu --disable-dev-shm-usage"' \
+        > /etc/chromium.d/99-container-flags && \
     # Fail the build loudly if the browser binary is missing.
     command -v chromium >/dev/null 2>&1 && \
     clean-layer.sh
@@ -341,6 +352,23 @@ RUN \
     /bin/bash $RESOURCES_PATH/tools/pycharm.sh && \
     # Fail the build loudly if the launcher is missing.
     command -v pycharm-community >/dev/null 2>&1 && \
+    clean-layer.sh
+
+# ZCode (Electron IDE) — installed from the official .deb by
+# resources/tools/zcode.sh, same pattern as the PyCharm block above.
+# The script also replaces the Electron binary with a --no-sandbox wrapper:
+# this container's runtime forbids user namespaces even for root, so the
+# chrome-sandbox cannot work under any configuration (verified: the setuid
+# root workaround is blocked by the kernel too). Without the wrapper the
+# app crashes on startup; with it the GUI runs stably. The wrapper also
+# raises the fd limit to 65535 (fixes startup EMFILE errors).
+# A desktop shortcut is created at ~/Desktop/zcode.desktop for the VNC session.
+# NOTE: amd64 only — the official .deb ships linux-x64 builds exclusively.
+COPY resources/tools/zcode.sh $RESOURCES_PATH/tools/zcode.sh
+RUN \
+    /bin/bash $RESOURCES_PATH/tools/zcode.sh && \
+    # Fail the build loudly if the launcher is missing.
+    command -v zcode >/dev/null 2>&1 && \
     clean-layer.sh
 
 ### END GUI TOOLS ###
