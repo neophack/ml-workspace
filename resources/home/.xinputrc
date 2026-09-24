@@ -1,5 +1,6 @@
-# ~/.xinputrc — set Fcitx as the default XIM input method.
-XIM=fcitx
-XIM_PROGRAM=fcitx
+# ~/.xinputrc — set Fcitx 5 as the default XIM input method.
+# GTK/Qt im-module names stay "fcitx" under fcitx5.
+XIM=fcitx5
+XIM_PROGRAM=fcitx5
 GTK_IM_MODULE=fcitx
 QT_IM_MODULE=fcitx

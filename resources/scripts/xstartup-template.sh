@@ -23,7 +23,7 @@ unset DBUS_SESSION_BUS_ADDRESS
 xsetroot -solid grey 2>/dev/null
 
 # Start a private D-Bus session bus and export its address so xfce4-session
-# and all spawned apps (including fcitx) can use it. dbus-launch prints
+# and all spawned apps (including fcitx5) can use it. dbus-launch prints
 # "eval" lines setting DBUS_SESSION_BUS_ADDRESS / DBUS_SESSION_BUS_PID; we
 # eval them into the current shell.
 if command -v dbus-launch >/dev/null 2>&1; then
@@ -32,22 +32,19 @@ if command -v dbus-launch >/dev/null 2>&1; then
 fi
 
 # Export input-method environment variables so GTK/Qt/XIM applications can
-# talk to the running fcitx instance. im-config only creates a Wayland profile
-# in this container, so set them explicitly for the X11 VNC session.
+# talk to the running fcitx5 instance. im-config only creates a Wayland profile
+# in this container, so set them explicitly for the X11 VNC session. fcitx5
+# keeps the "fcitx" im-module name for GTK/Qt/XIM.
 export GTK_IM_MODULE=fcitx
 export QT_IM_MODULE=fcitx
 export QT_QPA_PLATFORM=xcb
 export QT_QPA_PLATFORMTHEME=gtk2
 export XMODIFIERS=@im=fcitx
 
-# Start the fcitx input method daemon before the desktop so it is available as
-# soon as the XFCE session launches.
-fcitx &
-
-# Sogou Pinyin's candidate-box service is managed by supervisord (see
-# resources/supervisor/programs/sogoupinyin.conf), which waits for this
-# session and fcitx to come up and restarts the service if it exits.
-# Nothing to launch here.
+# Start the fcitx5 input method daemon before the desktop so it is available as
+# soon as the XFCE session launches. The Rime engine deploys its schemas on
+# first start (see ~/.local/share/fcitx5/rime).
+fcitx5 -d &
 
 # Run xfce4-session as the last foreground process. When it exits, Xvnc
 # tears the display down — which is the desired lifecycle.

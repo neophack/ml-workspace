@@ -794,7 +794,7 @@ The workspace is pre-installed with many popular interpreters, data science libr
 
 - **Interpreter:** Python 3.8 (Miniconda 3), NodeJS 14, Scala, Perl 5
 - **Python libraries:** Tensorflow, Keras, Pytorch, Sklearn, XGBoost, MXNet, Theano, and [many more](https://github.com/ml-tooling/ml-workspace/tree/main/resources/libraries)
-- **Package Manager:** `conda`, `pip`, `apt-get`, `npm`, `yarn`, `sdk`, `poetry`, `gdebi`...  
+- **Package Manager:** `conda`, `pip`, `apt-get`, `npm`, `yarn`, `sdk`, `poetry`...  
 
 The full list of installed tools can be found within the [Dockerfile](https://github.com/ml-tooling/ml-workspace/blob/main/Dockerfile).
 

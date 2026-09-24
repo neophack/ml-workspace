@@ -71,7 +71,8 @@ fi
 export PATH="$HOME/.local/bin:$PATH"
 export WORKSPACE_HOME="${WORKSPACE_HOME:-/workspace}"
 
-# --- Fcitx / Sogou Pinyin input method environment ---
+# --- Fcitx 5 / Rime input method environment ---
+# fcitx5 keeps the "fcitx" im-module name for GTK/Qt/XIM.
 export GTK_IM_MODULE=fcitx
 export QT_IM_MODULE=fcitx
 export XMODIFIERS="@im=fcitx"

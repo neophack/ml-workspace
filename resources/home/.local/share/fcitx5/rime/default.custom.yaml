@@ -1,0 +1,8 @@
+# Rime user customization. The first schema is the default; switch schemas
+# inside Rime with Ctrl+` or F4.
+#   luna_pinyin_simp  朙月拼音·简化字 (simplified Chinese pinyin)
+#   wubi86            五笔86
+patch:
+  schema_list:
+    - schema: luna_pinyin_simp
+    - schema: wubi86

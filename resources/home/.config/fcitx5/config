@@ -1,0 +1,8 @@
+[Hotkey/TriggerKeys]
+0=Control+space
+
+[Behavior]
+# Share the input state between all windows
+ShareInputState=No
+# Show preedit inside applications when supported
+PreeditEnabledByDefault=True

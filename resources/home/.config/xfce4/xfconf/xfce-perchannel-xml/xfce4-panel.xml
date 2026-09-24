@@ -62,6 +62,7 @@
     <property name="plugin-2" type="string" value="systray">
       <property name="known-items" type="array">
         <value type="string" value="Fcitx"/>
+        <value type="string" value="Fcitx 5"/>
       </property>
     </property>
   </property>

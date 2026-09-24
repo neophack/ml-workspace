@@ -55,14 +55,14 @@ elif args.mode == "backup":
     log.info("Starting configuration backup.")
     backup_selection = "--include='/.config' \
                         --include='/.config/xfce4/' --include='/.config/xfce4/xfconf/***' \
-                        --include='/.config/fcitx/' \
-                        --include='/.config/SogouPY/' \
-                        --include='/.sogouinput/' \
+                        --include='/.config/fcitx5/' --include='/.config/fcitx5/***' \
                         --include='/.config/Code/' --include='/.config/Code/User/' --include='/.config/Code/User/settings.json' \
                         --include='/.config/gtk-3.0/' --include='/.config/gtk-3.0/bookmarks' \
                         --include='/.gitconfig' \
                         --include='/filebrowser.db' \
-                        --include='/.local/' --include='/.local/share/' --include='/.local/share/jupyter/' --include='/.local/share/jupyter/kernels/***' \
+                        --include='/.local/' --include='/.local/share/' \
+                        --include='/.local/share/fcitx5/***' \
+                        --include='/.local/share/jupyter/' --include='/.local/share/jupyter/kernels/***' \
                         --include='/.jupyter/***'"
     # Do not backup vscode extensions? --include='/.vscode/***' \
     

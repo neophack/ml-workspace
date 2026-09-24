@@ -375,6 +375,22 @@ RUN \
 
 ### PYTHON PACKAGES ###
 
+# PyPI index. pypi.org is unreliable from CN networks: index queries for
+# individual packages intermittently return an EMPTY page, so pip fails with
+# "No matching distribution found (from versions: none)" for packages that
+# exist (e.g. sqlalchemy). Default to the Tsinghua mirror for both speed and
+# reliability; restore upstream PyPI with:
+#   docker build --build-arg PIP_INDEX_URL=https://pypi.org/simple .
+# (The torchaudio line below passes its own download.pytorch.org index via -i,
+# which takes precedence for that one command. Deliberately placed at this
+# section rather than higher up: supervisor above is the only pip step before
+# it, and keeping the ENV here preserves the build cache of every apt/desktop
+# layer before it.)
+ARG PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+ENV PIP_INDEX_URL=${PIP_INDEX_URL} \
+    PIP_RETRIES=10 \
+    PIP_DEFAULT_TIMEOUT=60
+
 # GPU runtime helpers + ONNX. gpustat needs nvidia-ml-py (already in the NGC base as
 # 12.570.86); do NOT install nvidia-ml-py3 (an old fork that conflicts with it).
 # torchaudio 2.7.0 matches the NGC torch 2.7.0a0 and MUST be installed with
@@ -406,75 +422,47 @@ RUN \
 
 ### END PYTHON PACKAGES ###
 
-### INPUT METHOD (Sogou Pinyin via fcitx) ###
+### INPUT METHOD (fcitx5 + Rime: simplified pinyin + wubi86) ###
 
-COPY resources/sogoupinyin_4.2.1.145_amd64.deb $RESOURCES_PATH/
-
-# fcitx 4 + Sogou Pinyin. The official .deb targets older Ubuntu releases but runs
-# on 24.04 when the fcitx stack and the Qt5/QML libraries it needs are present.
-# We install fcitx and its frontends explicitly because Ubuntu 24.04's metapackage
-# with --no-install-recommends no longer pulls in the UI and GTK/Qt frontends,
-# which makes the IME fail to start.
+# fcitx5 + Rime. Noble's official universe repo ships the whole fcitx5 stack
+# (5.1.x). With --no-install-recommends the metapackage does not pull in the
+# addon modules, GTK/Qt frontends or the Rime engine, so they are listed
+# explicitly. librime-data-luna-pinyin provides the luna_pinyin_simp schema
+# (simplified-character pinyin, the default) and librime-data-wubi provides
+# wubi86; both are enabled via ~/.local/share/fcitx5/rime/default.custom.yaml
+# (see resources/home/). fonts-droid-fallback is the CJK fallback font used by
+# the candidate window. humanity-icon-theme + librsvg2-common are needed by the
+# XFCE panel/menu icons (SVG), unrelated to the IME but kept in this block.
 RUN \
     apt-get update && \
-    # Sogou Pinyin 4.2.1's candidate-box service links against Qt5Svg and Xss;
-    # without them it silently fails to start, so install those runtime libs here.
     apt-get install -y --no-install-recommends \
-        fcitx \
-        fcitx-bin \
-        fcitx-data \
-        fcitx-libs \
-        fcitx-ui-classic \
-        fcitx-module-dbus \
-        fcitx-module-kimpanel \
-        fcitx-module-x11 \
-        fcitx-frontend-gtk2 \
-        fcitx-frontend-gtk3 \
-        fcitx-frontend-qt5 \
-        fcitx-config-gtk \
-        gdebi \
+        fcitx5 \
+        fcitx5-modules \
+        fcitx5-frontend-gtk2 \
+        fcitx5-frontend-gtk3 \
+        fcitx5-frontend-gtk4 \
+        fcitx5-frontend-qt5 \
+        fcitx5-config-qt \
+        fcitx5-rime \
+        librime-data-luna-pinyin \
+        librime-data-wubi \
         im-config \
         lsb-release \
         x11-utils \
-        libxtst6 \
-        libqt5qml5 \
-        libqt5quick5 \
-        libqt5quickwidgets5 \
-        qml-module-qtquick2 \
-        libgsettings-qt1 \
-        libqt5svg5 \
-        libxss1 \
         fonts-droid-fallback \
         humanity-icon-theme \
-        # gdk-pixbuf SVG loader. Humanity's icons (all the XFCE Applications-menu
-        # category icons, many app/panel icons) are SVG-only; without
-        # librsvg2-common GTK cannot render ANY svg icon and shows the
-        # "broken image" placeholder instead (empty menu icons).
         librsvg2-common && \
     clean-layer.sh
 
-# Install Sogou Pinyin .deb and select fcitx as the default input method. The
-# package ships /etc/xdg/autostart desktop files for its service and watchdog;
-# make sure the fcitx input method itself also autostarts in the XFCE/VNC session.
+# Select fcitx5 as the default input method and make sure it autostarts in the
+# XFCE/VNC session (the Debian package ships the desktop file; the copy is a
+# belt-and-braces fallback).
 RUN \
-    gdebi -n $RESOURCES_PATH/sogoupinyin_4.2.1.145_amd64.deb && \
-    im-config -n fcitx && \
-    (cp /usr/share/applications/fcitx.desktop /etc/xdg/autostart/fcitx.desktop || true) && \
-    # Disable Sogou's own xdg-autostart entries: they race fcitx (the service
-    # starts before fcitx is on the session bus, then exits silently and the
-    # candidate box never appears). supervisord manages the service instead
-    # (resources/supervisor/programs/sogoupinyin.conf), with autorestart.
-    for f in /etc/xdg/autostart/sogoupinyin-service.desktop \
-             /etc/xdg/autostart/sogoupinyin-watchdog.desktop; do \
-        [ -f "$f" ] && printf '\nHidden=true\n' >> "$f"; \
-    done && \
-    # Fail the build if Sogou's candidate-box service still has missing .so
-    # dependencies, instead of discovering it at runtime inside the container.
-    if ldd /opt/sogoupinyin/files/bin/sogoupinyin-service | grep -q "not found"; then \
-        echo "ERROR: sogoupinyin-service has unmet library dependencies:"; \
-        ldd /opt/sogoupinyin/files/bin/sogoupinyin-service | grep "not found"; \
-        exit 1; \
-    fi && \
+    im-config -n fcitx5 && \
+    (cp /usr/share/applications/org.fcitx.Fcitx5.desktop /etc/xdg/autostart/org.fcitx.Fcitx5.desktop || true) && \
+    # Fail the build loudly if the daemon is missing, instead of discovering
+    # it at runtime inside the container.
+    command -v fcitx5 >/dev/null 2>&1 && \
     clean-layer.sh
 
 ### END INPUT METHOD ###
